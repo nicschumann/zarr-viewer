@@ -18,3 +18,7 @@ _For those who are curious about the transpilation setup, everything is handled 
 ### Style Notes
 
 The `.js` and `.ts` files in this project are formatted with `prettier`. We recommend turning `Format on Save` on in your editor, so that you're only committing properly formatted code. This will avoid ugly diffs.
+
+### Inspiration
+
+- [GeoJSON Viewer](https://geojson.io/).
