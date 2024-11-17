@@ -52,7 +52,7 @@ async function buildAndWatch() {
 
   // esbuild context for watch mode
   const ctx = await esbuild.context({
-    entryPoints: ["src/index.ts", "src/index.html"],
+    entryPoints: ["src/index.tsx", "src/index.html"],
     bundle: true,
     outdir: "dist",
     sourcemap: true,
@@ -92,7 +92,7 @@ async function buildAndWatch() {
     ],
     // Add HTML file to watched entryPoints
     absWorkingDir: process.cwd(),
-    entryPoints: ["src/index.ts", "src/index.html"],
+    entryPoints: ["src/index.tsx", "src/index.html"],
   });
 
   // Watch Tailwind config
