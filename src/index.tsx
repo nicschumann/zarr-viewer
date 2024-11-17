@@ -1,11 +1,17 @@
-import React from "react";
-import ReactDOM from "react-dom";
+import * as React from "react";
+import { createRoot } from "react-dom/client";
 
-function App() {
-  return <h1>Hello, World</h1>;
-}
+import App from "@/app";
 
-ReactDOM.render(<App />, document.getElementById("root"));
+/**
+ * This mounts the entire react application on the root element.
+ * The rest of the application should be defined elsewhere in react.
+ */
+window.addEventListener("DOMContentLoaded", () => {
+  const element = document.getElementById("root");
+  const root = createRoot(element);
+  root.render(<App />);
+});
 
 // import create_regl from "regl";
 
