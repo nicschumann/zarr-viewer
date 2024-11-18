@@ -4,7 +4,6 @@ const postcss = require("postcss");
 const tailwindcss = require("tailwindcss");
 const autoprefixer = require("autoprefixer");
 const fs = require("fs");
-const path = require("path");
 
 // Function to process CSS with Tailwind
 async function processTailwind() {
