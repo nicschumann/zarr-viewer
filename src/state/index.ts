@@ -52,6 +52,7 @@ export type ZarrViewer = {
   // should be a key in the .store's keys object.
   path: string;
   selection: IndexType[];
+  mapping: number[]; // this maps array dims (u, v, w, ...) to layout dims (x, y)
 };
 
 interface ApplicationState {
@@ -71,7 +72,13 @@ export const useApplicationState = create<ApplicationState>()(
       keys: {},
       tree: { type: "empty", children: {} },
     },
-    viewers: [],
+    viewers: [
+      {
+        path: "goes-fog-tomorrow-0.01-5min.zarr/X",
+        selection: [421192, 0, [12600, 12750], [5600, 5900]],
+        mapping: [3, 2],
+      },
+    ],
     addViewer(viewerSpec) {
       set((state) => {
         state.viewers = [viewerSpec];

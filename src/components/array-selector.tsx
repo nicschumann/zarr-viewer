@@ -4,10 +4,11 @@ import Input from "@/components/ui/input";
 import { HTTPZarrStore, useApplicationState } from "@/state";
 import clsx from "clsx";
 import { read } from "@/state/read-metadata";
-import ZarrBrowser from "./ui/zarr-browser";
+import ZarrBrowser from "./zarr-browser";
 
 export default function ArraySelector() {
   const currentStore = useApplicationState((s) => s.store);
+  const currentViewer = useApplicationState((s) => s.viewers[0]);
   const readHTTPStore = useApplicationState((s) => s.readHTTPStore);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,8 +37,10 @@ export default function ArraySelector() {
     }
   }, []);
 
+  console.log(currentStore.keys[currentViewer.path]);
+
   return (
-    <section className="absolute top-0 left-0 z-10">
+    <section className="absolute top-0 left-0 h-screen w-screen z-10">
       <section className={clsx("flex m-2")}>
         <div className={clsx("mb-4", "")}>
           <Input
@@ -57,6 +60,36 @@ export default function ArraySelector() {
           )}
         </div>
       </section>
+      {typeof currentViewer !== "undefined" &&
+        currentStore.keys[currentViewer.path] && (
+          <section className="absolute bottom-0 flex w-full">
+            <div className="mx-auto  rounded-md border border-input bg-background px-3 py-2 flex mb-2">
+              {currentViewer.selection.map((sel, i) => {
+                return (
+                  <div key={`dim-${i}`} className="px-2 text-center">
+                    <div className="text-xs mb-1">
+                      <span>
+                        {
+                          currentStore.keys[currentViewer.path].ref.attrs
+                            ._ARRAY_DIMENSIONS[i]
+                        }
+                      </span>
+                      {i == currentViewer.mapping[0] && <span> (X)</span>}
+                      {i == currentViewer.mapping[1] && <span> (Y)</span>}
+                    </div>
+                    {typeof sel === "number" && <div>{sel}</div>}
+                    {sel === null && <div>:</div>}
+                    {typeof sel === "object" && (
+                      <div>
+                        {sel[0]}:{sel[1]}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
     </section>
   );
 }
