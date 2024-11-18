@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "build": "./scripts/build.sh",
     "dev": "./scripts/watch.sh",
     "clean": "rm -rf ./dist"
@@ -28,10 +28,12 @@
   },
   "homepage": "https://github.com/nicschumann/zarr-viewer#readme",
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "vitest": "^2.1.5"
   },
   "dependencies": {
     "gl-matrix": "^3.4.3",
+    "ndarray": "^1.0.19",
     "regl": "^2.1.1",
     "zarrita": "^0.4.0-next.17"
   }
