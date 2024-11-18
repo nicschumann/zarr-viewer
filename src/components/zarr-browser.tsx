@@ -82,7 +82,7 @@ const ZarrBrowser: React.FC<ZarrBrowserProps> = ({ store }) => {
         console.log(node);
         addViewer({
           path: node.path,
-          selection: [421192, 0, [12600, 12750], [5600, 5900]],
+          selection: [421192, 0, [12600, 12900], [5600, 5900]],
           mapping: [3, 2],
         });
       }

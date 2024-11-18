@@ -10,6 +10,7 @@ export default function ArraySelector() {
   const currentStore = useApplicationState((s) => s.store);
   const currentViewer = useApplicationState((s) => s.viewers[0]);
   const readHTTPStore = useApplicationState((s) => s.readHTTPStore);
+  const addViewer = useApplicationState((s) => s.addViewer);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -29,15 +30,35 @@ export default function ArraySelector() {
         inputElement.blur();
       };
 
+      const keydownHandler = (e: KeyboardEvent) => {
+        console.log("keydown");
+        if (e.key == "ArrowUp" && typeof currentViewer !== "undefined") {
+          const sel = currentViewer.selection;
+          addViewer({
+            ...currentViewer,
+            selection: [sel[0] + 1, sel[1], sel[2], sel[3]],
+          });
+        }
+
+        if (e.key == "ArrowDown" && typeof currentViewer !== "undefined") {
+          const sel = currentViewer.selection;
+          addViewer({
+            ...currentViewer,
+            selection: [sel[0] - 1, sel[1], sel[2], sel[3]],
+          });
+        }
+      };
+
       inputElement.addEventListener("change", changeHandler);
+
+      window.addEventListener("keydown", keydownHandler);
 
       return () => {
         inputElement.removeEventListener("change", changeHandler);
+        window.removeEventListener("keydown", keydownHandler);
       };
     }
-  }, []);
-
-  console.log(currentStore.keys[currentViewer.path]);
+  }, [currentViewer]);
 
   return (
     <section className="absolute top-0 left-0 h-screen w-screen z-10">

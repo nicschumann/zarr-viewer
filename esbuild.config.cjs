@@ -66,7 +66,6 @@ async function buildAndWatch() {
       {
         name: "html-and-tailwind-handler",
         setup(build) {
-          console.log("handler");
           // Watch the HTML file
           build.onLoad({ filter: /index\.html$/ }, () => {
             return {

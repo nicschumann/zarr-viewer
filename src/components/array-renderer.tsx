@@ -25,7 +25,6 @@ const getRegion = async (
   store: zarr.Array<zarr.Float32, any>,
   index: IndexType[]
 ) => {
-  let baseTime = 421192;
   const zarrIndex = index.map((value) => {
     if (typeof value === "number") return value;
     else if (value === null) {
@@ -33,7 +32,7 @@ const getRegion = async (
     } else return slice(value[0], value[1]);
   });
 
-  zarrIndex;
+  console.log(zarrIndex);
 
   let chunk = await get(store, zarrIndex);
 
@@ -139,20 +138,10 @@ export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
     setRegl((_) => localRegl);
     setShaders((_) => compileShaders(localRegl));
     setTextures(new TextureCache(localRegl));
-
-    if (typeof array !== "undefined") {
-      getRegion(array.ref, viewer.selection).then((data) => {
-        const key = makeKey(array.ref, viewer.selection);
-        setCurrentChunk((_) => ({
-          key,
-          array: data.chunk,
-          bounds: data.bounds,
-        }));
-      });
-    }
   }, []);
 
   useEffect(() => {
+    console.log(viewer);
     const array = store.keys[viewer.path];
     if (regl === null || shaders === null || typeof array === "undefined")
       return;
@@ -164,6 +153,7 @@ export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
       (currentChunk == null || currentChunk.key !== key)
     ) {
       console.log("get region");
+      console.log(array.ref, viewer.selection);
       getRegion(array.ref, viewer.selection).then((data) => {
         const key = makeKey(array.ref, viewer.selection);
         setCurrentChunk((_) => ({
@@ -175,7 +165,6 @@ export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
     }
 
     let clearColor: Vec4 = [0, 0, 0, 0];
-    // NOTE(Nic): we need to get a new chunk here if the cache key has changed...
 
     const renderLoopId = setInterval(() => {
       regl.clear({ depth: 1, color: clearColor });
@@ -183,7 +172,7 @@ export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
       const renderShape = getRenderShape(viewer);
       // NOTE(Nic): the selected chunk should have the same shape as this...
 
-      if (renderShape && renderShape.length == 2) {
+      if (renderShape && renderShape.length == 2 && currentChunk !== null) {
         const tex = textures.tex(currentChunk.array.data, renderShape);
         const aspect = renderShape[0] / renderShape[1];
         const zoom = 1;
@@ -200,7 +189,7 @@ export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
           u_resolution: renderShape,
         });
       } else {
-        clearColor = [1, 0, 0, 1];
+        clearColor = [0, 0, 0, 0];
         // something went wrong, render an error texture...
       }
     }, 60 / 1000);

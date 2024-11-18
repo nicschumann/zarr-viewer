@@ -43,7 +43,7 @@ export type Uninitialized = {
 
 export type ZarrStore = HTTPZarrStore | Uninitialized;
 
-export type IndexType = null | number | [number, number];
+export type IndexType = null | number | [number, number]; // no striding
 
 export type DimensionMapping = { x: string; y?: string };
 
@@ -65,20 +65,15 @@ interface ApplicationState {
 export const useApplicationState = create<ApplicationState>()(
   immer((set) => ({
     // NOTE(Nic): maybe you should be able to view and walk multiple stores?
+    // state:
     store: {
-      type: "http",
-      uri: "http://localhost:8000/zarr/goes-fog-tomorrow-0.01-5min.zarr/X",
-      loaded: false,
+      type: "uninitialized",
       keys: {},
       tree: { type: "empty", children: {} },
     },
-    viewers: [
-      {
-        path: "goes-fog-tomorrow-0.01-5min.zarr/X",
-        selection: [421192, 0, [12600, 12750], [5600, 5900]],
-        mapping: [3, 2],
-      },
-    ],
+    viewers: [],
+
+    // state update methods:
     addViewer(viewerSpec) {
       set((state) => {
         state.viewers = [viewerSpec];
