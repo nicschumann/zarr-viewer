@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "jsx": "react",
+    "baseUrl": "src",
+    "lib": ["ES2017", "DOM"],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
