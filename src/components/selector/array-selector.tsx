@@ -11,9 +11,9 @@ import React, {
   MouseEvent,
 } from "react";
 
-interface IArraySelectorProps {
+type IArraySelectorProps = {
   active: boolean;
-}
+} & React.ComponentProps<"div">;
 
 type SelectorState = {
   names: string[];
@@ -137,7 +137,10 @@ const handleFocus =
     });
   };
 
-export default function ArraySelector({ active }: IArraySelectorProps) {
+export default function ArraySelector({
+  active,
+  className,
+}: IArraySelectorProps) {
   /**
    * This will later be pulled out as a prop.
    */
@@ -184,14 +187,14 @@ export default function ArraySelector({ active }: IArraySelectorProps) {
   }, [active]);
 
   return (
-    <div ref={containerRef} className="bg-white flex p-2 w-fit">
+    <div ref={containerRef} className={cn("flex w-fit", className)}>
       {selectorState.dims.map((dim, i) => {
         return (
           <div
             key={`dim-${i}`}
             className={cn(
               "mr-2 last:mr-0",
-              "border-2 border-input rounded-md",
+              "border-2 border-input border-gray-300 rounded-md bg-white",
               active && selectorState.ui.activeDim === i
                 ? "border-gray-400"
                 : ""
@@ -199,7 +202,7 @@ export default function ArraySelector({ active }: IArraySelectorProps) {
           >
             {/* metadata above */}
             <div className="text-xs p-1 border-b border-gray-20">
-              <div className="flex w-fit m-auto">
+              <div className="flex m-auto">
                 <span>{selectorState.names[i]}</span>
 
                 {selectorState.mapping.x === i && (
@@ -231,7 +234,7 @@ export default function ArraySelector({ active }: IArraySelectorProps) {
             <div className="text-xs text-center w-fit">
               <input
                 className={cn(
-                  "flex h-10 rounded-md  bg-background m-1 py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  "flex h-7 w-[10ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
                 onFocus={handleFocus(setSelectorState, i)}
                 defaultValue={0}
@@ -242,7 +245,7 @@ export default function ArraySelector({ active }: IArraySelectorProps) {
             {/* metadata below */}
             <div className="text-xs p-1 border-t border-gray-20">
               <div className="flex w-fit m-auto">
-                <span className="text-gray-400">units go here</span>
+                <span className="text-gray-400">units</span>
               </div>
             </div>
           </div>
