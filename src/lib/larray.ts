@@ -1,8 +1,9 @@
 import * as zarr from "zarrita";
+import { num2date, date2num } from "./cf-time";
 export interface Slice {
-  start: number;
-  stop: number;
-  step?: number | null;
+  start: number | Date;
+  stop: number | Date;
+  step?: number | Date | null;
 }
 type Predicate = Slice | number | Array<number>;
 type Predicates = Record<string, Predicate>;
@@ -19,7 +20,6 @@ function isArray(pred: Predicate): pred is Array<any> {
 function isNumber(pred: Predicate): pred is number {
   return Number.isFinite(pred);
 }
-
 export class ArrayIndexer {
   readonly array: Array<number>;
   private readonly visibleIndexes: Array<number>;
@@ -32,31 +32,47 @@ export class ArrayIndexer {
     this.visibleIndexes = visibleIndexes || Array.from(array).map((_, i) => i);
   }
 
-  sel(pred: Predicate) {
+  // translate a lookup value to a value stored in the underlying array
+  protected translateH2A(value: number): number {
+   return value;
+  }
+
+  protected translateA2H(value: number): number {
+    return value;
+   }
+
+  public sel(pred: Predicate): ArrayIndexer {
     let visibleIndexes;
     if (isSlice(pred)) {
-      const startIndex = this.array.findIndex((value) => value >= pred.start);
-      const stopIndex = this.array.findLastIndex((value) => value < pred.stop);
+      const translatedSlice: Slice = {
+        start: this.translateH2A(pred.start),
+        stop: this.translateH2A(pred.stop),
+        step: this.translateH2A(pred.step)
+      };
+      const startIndex = this.array.findIndex((value) => value >= translatedSlice.start);
+      const stopIndex = this.array.findLastIndex((value) => value < translatedSlice.stop);
       visibleIndexes = this.visibleIndexes.filter(
         (v) => v >= startIndex && v <= stopIndex
       );
-    } else if (isNumber(pred)) {
-      const value = this.array.indexOf(pred);
+    } else if (isArray(pred)) {
+      const translatedPred = pred.map(this.translateH2A);
+      const n = this.array
+        .map((v, i) => (translatedPred.indexOf(v) >= 0 ? i : -1))
+        .filter((v) => v > -1);
+      visibleIndexes = this.visibleIndexes.filter((v) => n.indexOf(v) >= 0);
+    } else {
+      const translatedPred = this.translateH2A(pred);
+      const value = this.array.indexOf(translatedPred);
       if (value >= 0 && this.visibleIndexes.indexOf(value) >= 0) {
         visibleIndexes = [value];
       } else {
         visibleIndexes = [];
       }
-    } else if (isArray(pred)) {
-      const n = this.array
-        .map((v, i) => (pred.indexOf(v) >= 0 ? i : -1))
-        .filter((v) => v > -1);
-      visibleIndexes = this.visibleIndexes.filter((v) => n.indexOf(v) >= 0);
     }
-    return new ArrayIndexer(this.array, visibleIndexes);
+    return this.newCopyOf(this.array, visibleIndexes);
   }
 
-  isel(pred: Predicate) {
+  public isel(pred: Predicate) {
     let visibleIndexes;
     if (isSlice(pred)) {
       visibleIndexes = this.visibleIndexes.slice(pred.start, pred.stop);
@@ -71,24 +87,33 @@ export class ArrayIndexer {
         (v, i) => pred.indexOf(i) >= 0
       );
     }
-    return new ArrayIndexer(this.array, visibleIndexes);
+    return this.newCopyOf(this.array, visibleIndexes);
   }
 
-  get zindex() {
+  protected newCopyOf(array, visibleIndexes): ArrayIndexer {
+    return new ArrayIndexer(array, visibleIndexes);
+  }
+
+  public get zindex() {
     if (this.visibleIndexes.length > 1) {
-      return zarr.slice(
+      return [
         this.visibleIndexes[0],
         this.visibleIndexes[this.visibleIndexes.length - 1] + 1
-      );
+      ];
     } else {
       return this.visibleIndexes.length ? this.visibleIndexes[0] : null;
     }
   }
 
-  get vals() {
-    console.log(this.visibleIndexes);
+  public get vals() {
     return this.visibleIndexes.map((v) => this.array[v]);
   }
+
+  public get valsHuman() {
+    return this.visibleIndexes.map((v) => this.translateA2H(this.array[v]));
+  }
+
+
 }
 
 function isTypedNumberArray(arr: any): boolean {
@@ -96,6 +121,34 @@ function isTypedNumberArray(arr: any): boolean {
     ArrayBuffer.isView(arr) &&
     !(arr instanceof DataView) // Exclude DataView, which is also an ArrayBuffer view but not a typed array
   );
+}
+
+export class DateArrayIndexer extends ArrayIndexer {
+
+  readonly dateUnits: string;
+
+  constructor(
+    array: Array<any>,
+    visibleIndexes: Array<number> | null = null,
+    units: string
+  ) {
+    super(array, visibleIndexes)
+    this.dateUnits = units;
+  }
+
+  protected newCopyOf(array: any, visibleIndexes: any): DateArrayIndexer {
+    return new DateArrayIndexer(array, visibleIndexes, this.dateUnits);
+  }
+
+  protected translateH2A(value: number | Date): BigInt {
+    if (value instanceof Date) {
+      return BigInt(date2num([value], this.dateUnits)[0]);
+    }
+  }
+
+  protected translateA2H(value: number): number | Date {
+    return num2date(new BigInt64Array([BigInt(value)]), this.dateUnits)[0];
+  }
 }
 
 export const coordsFromZarr = async (
@@ -112,7 +165,12 @@ export const coordsFromZarr = async (
       });
       const arr = await zarr.get(coordArray);
       const data = arr.data;
-      return [d, new ArrayIndexer(data)];
+
+      if (d == 'time') {
+        return [d, new DateArrayIndexer(data, null, coordArray.attrs.units)]
+      } else {
+        return [d, new ArrayIndexer(data)];
+      }
     })
   );
   return Object.fromEntries(coords);
