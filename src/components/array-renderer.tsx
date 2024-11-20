@@ -32,18 +32,15 @@ const getRegion = async (
     } else return slice(value[0], value[1]);
   });
 
-  console.log(zarrIndex);
-
   let chunk = await get(store, zarrIndex);
 
   const bounds = chunk.data.reduce(
     (prev, value) => ({
-      min: Math.min(prev.min, value),
-      max: Math.max(prev.max, value),
+      min: Math.min(prev.min, Number.isNaN(value) ? Infinity : value),
+      max: Math.max(prev.max,  Number.isNaN(value) ? -Infinity : value),
     }),
     { max: -Infinity, min: Infinity }
   );
-
   return { chunk, bounds };
 };
 
