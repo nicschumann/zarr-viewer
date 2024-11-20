@@ -55,17 +55,35 @@ export type ZarrViewer = {
   mapping: number[]; // this maps array dims (u, v, w, ...) to layout dims (x, y)
 };
 
+export type ApplicationUIZone = "browser" | "selector" | "editor";
+
+type FocusState =
+  | {
+      region: "browser";
+    }
+  | { region: "selector" }
+  | { region: "editor" };
+
 interface ApplicationState {
+  ui: {
+    focus: FocusState;
+  };
   store: ZarrStore;
   viewers: ZarrViewer[];
   readHTTPStore: (uri: string) => Promise<void>;
   addViewer: (viewerSpec: ZarrViewer) => void;
+  setFocusZone: (region: ApplicationUIZone) => void;
 }
 
 export const useApplicationState = create<ApplicationState>()(
   immer((set) => ({
     // NOTE(Nic): maybe you should be able to view and walk multiple stores?
     // state:
+    ui: {
+      focus: {
+        region: "browser",
+      },
+    },
     store: {
       type: "uninitialized",
       keys: {},
@@ -77,6 +95,11 @@ export const useApplicationState = create<ApplicationState>()(
     addViewer(viewerSpec) {
       set((state) => {
         state.viewers = [viewerSpec];
+      });
+    },
+    setFocusZone(region) {
+      set((state) => {
+        state.ui.focus.region = region;
       });
     },
     async readHTTPStore(uri) {
