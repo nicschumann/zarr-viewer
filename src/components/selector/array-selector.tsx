@@ -1,14 +1,13 @@
 import { cn } from "@/lib/utils";
+import { ApplicationUIZone, useApplicationState } from "@/state";
 import React, {
   useRef,
   useEffect,
   useState,
   Dispatch,
   SetStateAction,
-  useMemo,
   MutableRefObject,
   FocusEvent,
-  MouseEvent,
 } from "react";
 
 type IArraySelectorProps = {
@@ -122,8 +121,15 @@ const handleKeydown =
   };
 
 const handleFocus =
-  (set: Dispatch<SetStateAction<SelectorState>>, inputIndex: number) =>
+  (
+    set: Dispatch<SetStateAction<SelectorState>>,
+    setFocusZone: (region: ApplicationUIZone) => void,
+    inputIndex: number,
+    focusRegion: ApplicationUIZone
+  ) =>
   (e: FocusEvent) => {
+    if (focusRegion !== "selector") setFocusZone("selector");
+
     set((prev) => {
       return {
         ...prev,
@@ -155,15 +161,14 @@ export default function ArraySelector({
     },
   });
 
-  /**
-   * This array will handle references to the input element in each dim.
-   * We need this so we can focus and blur the elements based on keystrokes,
-   * and generally make the keyboard operations feel nice.
-   */
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const focusRegion = useApplicationState((state) => state.ui.focus.region);
+  const setFocusZone = useApplicationState((state) => state.setFocusZone);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    if (focusRegion !== "selector") return;
     const inputs = getInputElements(containerRef);
 
     // make sure the DOM state matches the UI proxy.
@@ -184,7 +189,7 @@ export default function ArraySelector({
     return () => {
       window.removeEventListener("keydown", localKeydownHandler);
     };
-  }, [active]);
+  }, [active, focusRegion]);
 
   return (
     <div ref={containerRef} className={cn("flex w-fit", className)}>
@@ -195,7 +200,9 @@ export default function ArraySelector({
             className={cn(
               "mr-2 last:mr-0",
               "border-2 border-input border-gray-300 rounded-md bg-white",
-              active && selectorState.ui.activeDim === i
+              active &&
+                selectorState.ui.activeDim === i &&
+                focusRegion === "selector"
                 ? "border-gray-400"
                 : ""
             )}
@@ -236,7 +243,12 @@ export default function ArraySelector({
                 className={cn(
                   "flex h-7 w-[10ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
-                onFocus={handleFocus(setSelectorState, i)}
+                onFocus={handleFocus(
+                  setSelectorState,
+                  setFocusZone,
+                  i,
+                  focusRegion
+                )}
                 defaultValue={0}
                 min={0}
                 max={dim}

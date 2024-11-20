@@ -1,44 +1,50 @@
 import * as React from "react";
-import ArraySelector from "@/components/selector/array-selector";
+import ArrayEditor from "./components/editor/array-editor";
+import AddStoreButton from "./components/browser/add-store-button";
+import StoreDisplay from "./components/browser/store-display";
+import { useApplicationState } from "./state";
 
 export default function App() {
+  const margin = `1em`;
+  const sidebarOpen = "350px";
+  const sidebarWidth = `${sidebarOpen} + 2 * ${margin}`;
+
+  const focusRegion = useApplicationState((state) => state.ui.focus.region);
+  // const setFocusZone = useApplicationState((state) => state.setFocusZone);
+
   return (
     <>
       <React.StrictMode>
-        <section className="group flex">
-          <div className="w-[50%] h-screen relative">
-            <div className="absolute w-full h-full top-0 left-0 ">
+        <div className="flex">
+          {/* browser */}
+          <section>
+            <div
+              style={{ width: `calc(${sidebarWidth})` }}
+              className="h-screen border"
+            >
               <div
-                className="relative my-4 group-first:ml-2 mx-1 group-last:mr-2 border-2 border-gray-300 rounded-xl bg-white"
+                className="bg-white h-full border-2 p-2 items-center border-gray-300 rounded-xl"
                 style={{
-                  height: "calc(100% - 2em)",
+                  margin: `${margin} 0 ${margin} ${margin}`,
+                  height: `calc(100vh - 2 * ${margin})`,
                 }}
               >
-                <div>This is where canvas 1 goes</div>
-                <ArraySelector
-                  className="absolute bottom-2 left-2"
-                  active={true}
-                />
+                {/* store label */}
+                <AddStoreButton />
+                {/* store directory tree, if expanded */}
+
+                <StoreDisplay />
               </div>
             </div>
-          </div>
-          <div className="w-[50%] h-screen relative">
-            <div className="absolute w-full h-full top-0 left-0 ">
-              <div
-                className="relative my-4 group-first:ml-2 mx-1 group-last:mr-2 ml-2 border-2 border-gray-300 rounded-xl bg-white"
-                style={{
-                  height: "calc(100% - 2em)",
-                }}
-              >
-                <div>this is where canvas 2 goes</div>
-                <ArraySelector
-                  className="absolute bottom-2 left-2"
-                  active={true}
-                />
-              </div>
+          </section>
+          {/* editors */}
+          <section className="flex">
+            <ArrayEditor sidebarWidth={sidebarWidth} />
+            <div className="absolute top-2 right-2 bg-blue-300 p-1 px-3 rounded text-xs">
+              focus: {focusRegion}
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </React.StrictMode>
     </>
   );
