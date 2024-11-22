@@ -1,13 +1,19 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState } from "@/state";
-import React, { useRef, useState } from "react";
+import { readStore, resultIsError } from "@/state/read-metadata";
+import React, { useEffect, useRef, useState } from "react";
+
+type ComponentUIState = {
+  state: "loading" | "error" | "normal";
+};
 
 export default function AddStoreButton() {
   const [expanded, setExpanded] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [uiState, setUIState] = useState<ComponentUIState>({ state: "normal" });
+  ///
   const inputRef = useRef<HTMLInputElement>(null);
-  const focusRegion = useApplicationState((state) => state.ui.focus.region);
-  const setFocusZone = useApplicationState((state) => state.setFocusZone);
+  const focus = useApplicationState((state) => state.ui.focus);
+  const setFocusData = useApplicationState((state) => state.setFocusData);
 
   const handleClick = () => {
     if (!inputRef.current) return;
@@ -17,19 +23,55 @@ export default function AddStoreButton() {
       inputRef.current.focus();
     } else {
       // submit the request
-      setHasError(true);
+      setUIState({ state: "error" });
     }
   };
 
-  const handleFocus = () => {
-    if (focusRegion !== "browser") setFocusZone("browser");
+  const handleFocus = async () => {
+    if (focus.region !== "browser")
+      setFocusData({
+        region: "browser",
+        target: "add",
+        storeIdx: -1,
+      });
   };
+
+  useEffect(() => {
+    if (focus.region !== "browser") return;
+    if (focus.target !== "add") return;
+    if (inputRef.current === null) return;
+
+    const keydownHandler = async (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        const maybeURI = inputRef.current.value;
+        if (maybeURI.length > 0 && inputRef.current.validity.valid) {
+          setUIState({ state: "loading" });
+          const storeOrError = await readStore(maybeURI);
+          console.log(storeOrError);
+          if (resultIsError(storeOrError)) {
+            setUIState({ state: "error" });
+          } else {
+            setUIState({ state: "normal" });
+            // set store in the state array.
+          }
+        } else {
+          setUIState({ state: "error" });
+        }
+      }
+    };
+
+    window.addEventListener("keydown", keydownHandler);
+
+    return () => {
+      window.removeEventListener("keydown", keydownHandler);
+    };
+  }, [focus.region]);
 
   return (
     <div
       className={cn(
         "rounded-md border-2 ",
-        focusRegion === "browser" ? "border-gray-400" : "border-white"
+        focus.region === "browser" ? "border-gray-400" : "border-white"
       )}
     >
       <div className="flex items-center cursor-pointer">
@@ -55,11 +97,14 @@ export default function AddStoreButton() {
             placeholder="Link A New Zarr Store..."
             type="url"
           />
-          {hasError && (
-            <div className="bg-red-600 font-bold rounded-sm px-1 py-[3px] absolute top-[50%] right-2 text-red-100 translate-y-[-50%]">
+          {uiState.state === "error" && (
+            <div
+              className="bg-red-600 font-bold rounded-sm px-1 py-[3px] absolute top-0 right-0 text-red-100 z-10"
+              style={{ transform: `translate(50%, -75%)` }}
+            >
               Error!
               <span
-                onClick={() => setHasError(false)}
+                onClick={() => setUIState({ state: "normal" })}
                 className="ml-3 font-normal"
               >
                 [x]

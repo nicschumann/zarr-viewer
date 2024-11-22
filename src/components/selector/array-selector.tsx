@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ApplicationUIZone, useApplicationState } from "@/state";
+import { ApplicationUIZone, FocusState, useApplicationState } from "@/state";
 import React, {
   useRef,
   useEffect,
@@ -123,12 +123,12 @@ const handleKeydown =
 const handleFocus =
   (
     set: Dispatch<SetStateAction<SelectorState>>,
-    setFocusZone: (region: ApplicationUIZone) => void,
+    setFocusData: (focusState: FocusState) => void,
     inputIndex: number,
     focusRegion: ApplicationUIZone
   ) =>
   (e: FocusEvent) => {
-    if (focusRegion !== "selector") setFocusZone("selector");
+    if (focusRegion !== "selector") setFocusData({ region: "selector" });
 
     set((prev) => {
       return {
@@ -164,7 +164,7 @@ export default function ArraySelector({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const focusRegion = useApplicationState((state) => state.ui.focus.region);
-  const setFocusZone = useApplicationState((state) => state.setFocusZone);
+  const setFocusData = useApplicationState((state) => state.setFocusData);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -245,7 +245,7 @@ export default function ArraySelector({
                 )}
                 onFocus={handleFocus(
                   setSelectorState,
-                  setFocusZone,
+                  setFocusData,
                   i,
                   focusRegion
                 )}
