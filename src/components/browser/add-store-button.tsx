@@ -1,19 +1,23 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState } from "@/state";
 import { readStore, resultIsError } from "@/state/read-metadata";
-import React, { useEffect, useRef, useState } from "react";
+import { Plus } from "lucide-react";
+import React, { HTMLProps, useEffect, useRef, useState } from "react";
 
 type ComponentUIState = {
   state: "loading" | "error" | "normal";
 };
 
-export default function AddStoreButton() {
+export default function AddStoreButton({
+  className,
+}: HTMLProps<HTMLDivElement>) {
   const [expanded, setExpanded] = useState(false);
   const [uiState, setUIState] = useState<ComponentUIState>({ state: "normal" });
   ///
   const inputRef = useRef<HTMLInputElement>(null);
   const focus = useApplicationState((state) => state.ui.focus);
   const setFocusData = useApplicationState((state) => state.setFocusData);
+  const addStore = useApplicationState((state) => state.addStore);
 
   const handleClick = () => {
     if (!inputRef.current) return;
@@ -47,12 +51,13 @@ export default function AddStoreButton() {
         if (maybeURI.length > 0 && inputRef.current.validity.valid) {
           setUIState({ state: "loading" });
           const storeOrError = await readStore(maybeURI);
-          console.log(storeOrError);
+
           if (resultIsError(storeOrError)) {
             setUIState({ state: "error" });
           } else {
             setUIState({ state: "normal" });
-            // set store in the state array.
+            addStore(storeOrError);
+            // TODO(Nic): set the focus region to the newly added store, and expand it.
           }
         } else {
           setUIState({ state: "error" });
@@ -71,7 +76,8 @@ export default function AddStoreButton() {
     <div
       className={cn(
         "rounded-md border-2 ",
-        focus.region === "browser" ? "border-gray-400" : "border-white"
+        focus.region === "browser" ? "border-gray-400" : "border-white",
+        className
       )}
     >
       <div className="flex items-center cursor-pointer">
@@ -80,8 +86,7 @@ export default function AddStoreButton() {
           className="flex items-center text-center m-2 w-[28px] h-[28px] rounded-[100%] bg-gray-700"
         >
           <div className="text-md font-bold mx-auto text-white">
-            {/* TODO(Nic): replace this with an actually nice icon please, the plus is not aligned properly. */}
-            +
+            <Plus width={20} />
           </div>
         </div>
 

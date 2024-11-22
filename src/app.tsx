@@ -31,7 +31,7 @@ export default function App() {
                 }}
               >
                 {/* store label */}
-                <AddStoreButton />
+                <AddStoreButton className="mb-2" />
                 {/* store directory tree, if expanded */}
                 {stores.map((store, i) => {
                   return <StoreDisplay key={`store-${i}`} store={store} />;

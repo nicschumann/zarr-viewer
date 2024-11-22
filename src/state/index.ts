@@ -5,11 +5,6 @@ import { readStore } from "./read-metadata";
 
 export type ZarrObject = zarr.Array<zarr.DataType, any> | zarr.Group<any>;
 
-export type ZarrEmpty = {
-  type: "empty";
-  children: { [name: string]: ZarrTree };
-};
-
 export type ZarrGroup = {
   type: "group";
   path: string;
@@ -26,7 +21,7 @@ export type ZarrArray = {
   children: { [name: string]: ZarrTree };
 };
 
-export type ZarrTree = ZarrGroup | ZarrArray | ZarrEmpty;
+export type ZarrTree = ZarrGroup | ZarrArray;
 
 export type HTTPZarrStore = {
   type: "http";
