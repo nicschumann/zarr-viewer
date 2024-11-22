@@ -1,7 +1,7 @@
 // sum.test.js
 import { expect, test } from 'vitest'
 import ndarray from "ndarray";
-import { ArrayIndexer, coordsFromZarr, Slice } from './larray.js'
+import { ArrayIndexer, coordsFromZarr, Slice, num2date } from './larray.js'
 import * as zarr from "zarrita";
 import { get, slice } from "@zarrita/indexing";
 
@@ -84,7 +84,7 @@ test('indexer get zarr array slices', async () => {
   const idxr = new ArrayIndexer(array);
   const filter: Slice = {start: 25, stop: 75};
   const first = idxr.sel(filter);
-  expect(first.zindex).toEqual(zarr.slice(2, 7));
+  expect(first.zindex).toEqual([2, 7]);
   expect(first.sel(30).zindex).toEqual(2);
   expect(first.sel(300).zindex).toEqual(null);
 })
@@ -104,7 +104,20 @@ test('coordsFromZarr', async () => {
   // actually perform a selection and query the zarr store using it
   const filtered = coordMap.lat.sel({start: 20, stop: 50});
   expect(filtered.vals).toEqual([20, 25, 30, 35, 40, 45]);
-  const filteredData = await zarr.get(testArr, [filtered.zindex])
+  const filteredData = await zarr.get(testArr, [slice(filtered.zindex[0], filtered.zindex[1])])
   expect(filteredData.data).toEqual(new Int32Array([20, 25, 30, 35, 40, 45]));
 
+});
+
+test('realStore', async () => {
+  // create a populated array
+  const storePath = "http://localhost:3001/goes-fog-tomorrow-0.01-5min.zarr/";
+  let store = await zarr.withConsolidated(new zarr.FetchStore(storePath));
+  const node = await zarr.open.v2(store);
+  const arr = await zarr.open.v2(node.resolve('/X'), { kind: "array" });
+
+  // generate coord map from array
+  const coordMap = await coordsFromZarr(arr);
+  const slice: Slice = {start: new Date('2016-01-01'), stop: new Date('2016-01-05')}
+  const filteredData = coordMap.time.sel(slice);
 });
