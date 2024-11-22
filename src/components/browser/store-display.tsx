@@ -1,6 +1,11 @@
+import { ZarrStore } from "@/state";
 import React from "react";
 
-export default function StoreDisplay() {
+interface IStoreDisplayProps {
+  store: ZarrStore;
+}
+
+export default function StoreDisplay({ store }: IStoreDisplayProps) {
   return (
     <div className="hover:bg-gray-200 rounded-md">
       {/* store label */}

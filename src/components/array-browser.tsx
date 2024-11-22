@@ -3,7 +3,7 @@ import React, { useRef, useEffect } from "react";
 import Input from "@/components/ui/input";
 import { HTTPZarrStore, useApplicationState } from "@/state";
 import clsx from "clsx";
-import { read } from "@/state/read-metadata";
+import { readStore } from "@/state/read-metadata";
 import ZarrBrowser from "./zarr-browser";
 
 export default function ArraySelector() {

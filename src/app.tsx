@@ -9,7 +9,8 @@ export default function App() {
   const sidebarOpen = "350px";
   const sidebarWidth = `${sidebarOpen} + 2 * ${margin}`;
 
-  const focusRegion = useApplicationState((state) => state.ui.focus.region);
+  const focusState = useApplicationState((state) => state.ui.focus);
+  const stores = useApplicationState((state) => state.stores);
   // const setFocusZone = useApplicationState((state) => state.setFocusZone);
 
   return (
@@ -32,8 +33,9 @@ export default function App() {
                 {/* store label */}
                 <AddStoreButton />
                 {/* store directory tree, if expanded */}
-
-                <StoreDisplay />
+                {stores.map((store, i) => {
+                  return <StoreDisplay key={`store-${i}`} store={store} />;
+                })}
               </div>
             </div>
           </section>
@@ -41,7 +43,7 @@ export default function App() {
           <section className="flex">
             <ArrayEditor sidebarWidth={sidebarWidth} />
             <div className="absolute top-2 right-2 bg-blue-300 p-1 px-3 rounded text-xs">
-              focus: {focusRegion}
+              <span>focus: {focusState.region}</span>
             </div>
           </section>
         </div>

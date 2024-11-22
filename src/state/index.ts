@@ -1,7 +1,7 @@
 import * as zarr from "zarrita";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { read } from "./read-metadata";
+import { readStore } from "./read-metadata";
 
 export type ZarrObject = zarr.Array<zarr.DataType, any> | zarr.Group<any>;
 
@@ -36,12 +36,7 @@ export type HTTPZarrStore = {
   tree: ZarrTree;
 };
 
-export type Uninitialized = {
-  type: "uninitialized";
-  keys: {};
-};
-
-export type ZarrStore = HTTPZarrStore | Uninitialized;
+export type ZarrStore = HTTPZarrStore;
 
 export type IndexType = null | number | [number, number]; // no striding
 
@@ -57,9 +52,11 @@ export type ZarrViewer = {
 
 export type ApplicationUIZone = "browser" | "selector" | "editor";
 
-type FocusState =
+export type FocusState =
   | {
       region: "browser";
+      target: "add" | "store";
+      storeIdx: number;
     }
   | { region: "selector" }
   | { region: "editor" };
@@ -68,27 +65,24 @@ interface ApplicationState {
   ui: {
     focus: FocusState;
   };
-  store: ZarrStore;
+  stores: ZarrStore[];
   viewers: ZarrViewer[];
-  readHTTPStore: (uri: string) => Promise<void>;
+  addStore: (zarrStore: ZarrStore) => void;
   addViewer: (viewerSpec: ZarrViewer) => void;
-  setFocusZone: (region: ApplicationUIZone) => void;
+  setFocusData: (focusState: FocusState) => void;
 }
 
 export const useApplicationState = create<ApplicationState>()(
   immer((set) => ({
-    // NOTE(Nic): maybe you should be able to view and walk multiple stores?
     // state:
     ui: {
       focus: {
         region: "browser",
+        target: "add",
+        storeIdx: -1,
       },
     },
-    store: {
-      type: "uninitialized",
-      keys: {},
-      tree: { type: "empty", children: {} },
-    },
+    stores: [],
     viewers: [],
 
     // state update methods:
@@ -97,16 +91,14 @@ export const useApplicationState = create<ApplicationState>()(
         state.viewers = [viewerSpec];
       });
     },
-    setFocusZone(region) {
+    addStore(zarrStore) {
       set((state) => {
-        state.ui.focus.region = region;
+        state.stores.push(zarrStore);
       });
     },
-    async readHTTPStore(uri) {
-      const result = await read(uri);
-
+    setFocusData(focusState) {
       set((state) => {
-        state.store = result;
+        state.ui.focus = focusState;
       });
     },
   }))
