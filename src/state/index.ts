@@ -37,13 +37,24 @@ export type IndexType = null | number | [number, number]; // no striding
 
 export type DimensionMapping = { x: string; y?: string };
 
-export type ZarrViewer = {
-  // NOTE(Nic): path pointing at array variable we want to visualize
-  // should be a key in the .store's keys object.
-  path: string;
-  selection: IndexType[];
-  mapping: number[]; // this maps array dims (u, v, w, ...) to layout dims (x, y)
-};
+export type ZarrView =
+  | {
+      // NOTE(Nic): path pointing at array variable we want to visualize
+      // should be a key in the .store's keys object.
+      state: "initialized";
+      //
+      store: string;
+      path: string;
+      //
+      selection: IndexType[];
+      mapping: DimensionMapping; // this maps array dims (u, v, w, ...) to layout dims (x, y)
+    }
+  | {
+      state: "uninitialized";
+      //
+      store: string;
+      path: string;
+    };
 
 export type ApplicationUIZone = "browser" | "selector" | "editor";
 
@@ -60,10 +71,10 @@ interface ApplicationState {
   ui: {
     focus: FocusState;
   };
-  stores: ZarrStore[];
-  viewers: ZarrViewer[];
+  stores: { [name: string]: ZarrStore };
+  viewers: ZarrView[];
   addStore: (zarrStore: ZarrStore) => void;
-  addViewer: (viewerSpec: ZarrViewer) => void;
+  addViewer: (viewerSpec: ZarrView) => void;
   setFocusData: (focusState: FocusState) => void;
 }
 
@@ -77,7 +88,7 @@ export const useApplicationState = create<ApplicationState>()(
         storeIdx: -1,
       },
     },
-    stores: [],
+    stores: {},
     viewers: [],
 
     // state update methods:
@@ -88,7 +99,7 @@ export const useApplicationState = create<ApplicationState>()(
     },
     addStore(zarrStore) {
       set((state) => {
-        state.stores.push(zarrStore);
+        state.stores[zarrStore.uri] = zarrStore;
       });
     },
     setFocusData(focusState) {

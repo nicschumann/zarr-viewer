@@ -146,6 +146,7 @@ const handleFocus =
 export default function ArraySelector({
   active,
   className,
+  style,
 }: IArraySelectorProps) {
   /**
    * This will later be pulled out as a prop.
@@ -192,7 +193,11 @@ export default function ArraySelector({
   }, [active, focusRegion]);
 
   return (
-    <div ref={containerRef} className={cn("flex w-fit", className)}>
+    <div
+      ref={containerRef}
+      className={cn("flex w-fit", className)}
+      style={style}
+    >
       {selectorState.dims.map((dim, i) => {
         return (
           <div

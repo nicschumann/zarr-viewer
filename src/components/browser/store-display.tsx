@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useApplicationState, ZarrStore, ZarrTree, ZarrViewer } from "@/state";
+import { useApplicationState, ZarrStore, ZarrTree, ZarrView } from "@/state";
 import { Box, Boxes, ChevronDown, ChevronRight } from "lucide-react";
 import React, { useState } from "react";
 
@@ -7,11 +7,19 @@ interface IStoreDisplayProps {
   store: ZarrStore;
 }
 
-const TreeNode: React.FC<{
+interface ITreeNodeProps {
   node: ZarrTree;
+  uri: string;
   level?: number;
-  addViewer: (viewerSpec: ZarrViewer) => void;
-}> = ({ node, level = 0, addViewer }) => {
+  addViewer: (viewerSpec: ZarrView) => void;
+}
+
+const TreeNode: React.FC<ITreeNodeProps> = ({
+  node,
+  uri,
+  level = 0,
+  addViewer,
+}) => {
   const [expanded, setExpanded] = useState(false);
   const type = node.type;
 
@@ -19,12 +27,13 @@ const TreeNode: React.FC<{
     if (node.type === "group") {
       setExpanded(!expanded);
     } else {
-      console.log(node.path);
-      /**
-       * NOTE(Nic): you can add a viewer for this array here.
-       * In the future, this would first display and focus a selector,
-       * and the selector would construct the viewer...
-       */
+      const viewSpec: ZarrView = {
+        state: "uninitialized",
+        store: uri,
+        path: node.path,
+      };
+
+      addViewer(viewSpec);
     }
   };
 
@@ -74,6 +83,7 @@ const TreeNode: React.FC<{
           return (
             <TreeNode
               key={`tree-node-${level}-${i}`}
+              uri={uri}
               node={subtree}
               level={level + 1}
               addViewer={addViewer}
@@ -85,12 +95,16 @@ const TreeNode: React.FC<{
 };
 
 export default function StoreDisplay({ store }: IStoreDisplayProps) {
-  const tree = store.tree;
   const addViewer = useApplicationState((store) => store.addViewer);
 
   return (
     <div className="border-2 rounded-md mb-2">
-      <TreeNode node={tree} level={0} addViewer={addViewer} />
+      <TreeNode
+        node={store.tree}
+        level={0}
+        addViewer={addViewer}
+        uri={store.uri}
+      />
     </div>
   );
 }

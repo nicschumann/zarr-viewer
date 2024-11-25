@@ -3,7 +3,7 @@ import {
   useApplicationState,
   ZarrArray,
   ZarrTree,
-  ZarrViewer,
+  ZarrView,
 } from "@/state";
 import React, { useRef, useEffect, useState } from "react";
 import create_regl, { Regl, Texture2D, Vec4 } from "regl";
@@ -47,7 +47,7 @@ const getRegion = async (
   return { chunk, bounds };
 };
 
-const getRenderShape = (viewer: ZarrViewer): [number, number] | false => {
+const getRenderShape = (viewer: ZarrView): [number, number] | false => {
   const x = viewer.selection[viewer.mapping[0]];
   const y = viewer.selection[viewer.mapping[1]];
 
@@ -103,7 +103,7 @@ type DataCache = {
   bounds: { min: number; max: number };
 };
 
-export default function ArrayRenderer({ viewer }: { viewer: ZarrViewer }) {
+export default function ArrayRenderer({ viewer }: { viewer: ZarrView }) {
   // global state
   const store = useApplicationState((state) => state.store);
 

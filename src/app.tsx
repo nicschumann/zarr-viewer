@@ -11,6 +11,7 @@ export default function App() {
 
   const focusState = useApplicationState((state) => state.ui.focus);
   const stores = useApplicationState((state) => state.stores);
+  const viewers = useApplicationState((state) => state.viewers);
   // const setFocusZone = useApplicationState((state) => state.setFocusZone);
 
   return (
@@ -32,8 +33,8 @@ export default function App() {
               >
                 {/* store label */}
                 <AddStoreButton className="mb-2" />
-                {/* store directory tree, if expanded */}
-                {stores.map((store, i) => {
+                {/* NOTE(Nic): add something to make the store ordering consistent... */}
+                {Object.entries(stores).map(([uri, store], i) => {
                   return <StoreDisplay key={`store-${i}`} store={store} />;
                 })}
               </div>
@@ -41,7 +42,16 @@ export default function App() {
           </section>
           {/* editors */}
           <section className="flex">
-            <ArrayEditor sidebarWidth={sidebarWidth} />
+            {viewers.length === 0 && <div>no viewers</div>}
+            {viewers.map((viewer, i) => {
+              return (
+                <ArrayEditor
+                  viewer={viewer}
+                  key={`viewer-${i}`}
+                  sidebarWidth={sidebarWidth}
+                />
+              );
+            })}
             <div className="absolute top-2 right-2 bg-blue-300 p-1 px-3 rounded text-xs">
               <span>focus: {focusState.region}</span>
             </div>

@@ -1,14 +1,19 @@
 import React from "react";
 import ArraySelector from "../selector/array-selector";
+import { ZarrView } from "@/state";
 
 const margin = `1em`;
 
 type IArrayEditorProps = {
   // informs this component how much width it needs to reserve for the sidebar.
   sidebarWidth: string;
+  viewer: ZarrView;
 };
 
-export default function ArrayEditor({ sidebarWidth }: IArrayEditorProps) {
+export default function ArrayEditor({
+  viewer,
+  sidebarWidth,
+}: IArrayEditorProps) {
   return (
     <div
       className="h-screen relative"
@@ -23,7 +28,14 @@ export default function ArrayEditor({ sidebarWidth }: IArrayEditorProps) {
           }}
         >
           {/* this is where the rendering component should go, with a ref to its parent container so it can set its size properly. */}
-          <ArraySelector className="absolute bottom-2 left-2" active={true} />
+          {viewer.state === "uninitialized" && (
+            <ArraySelector
+              className="absolute top-[50%] left-[50%]"
+              style={{ transform: `translate(-50%,-50%)` }}
+              active={true}
+            />
+          )}
+
           {/* This is where any additional controls should go. */}
         </div>
         {/* This is where the text-editor pane should pop out */}
