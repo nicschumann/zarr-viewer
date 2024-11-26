@@ -182,8 +182,8 @@ export default function ArrayRenderer({
   useEffect(() => {
     if (regl === null || shaders === null || parentElement.current === null)
       return;
-    const renderShape = getRenderShape(viewer);
-    console.log(viewer.selection);
+
+    const renderShape = viewer.drawing ? getRenderShape(viewer) : false;
 
     // this key uniquely describes the array selection
     const key = makeKey(tree.ref, viewer.selection);
@@ -193,7 +193,11 @@ export default function ArrayRenderer({
      */
 
     // if the viewer selection has changed, we better grab a new value!
-    if ((currentChunk == null || currentChunk.key !== key) && renderShape) {
+    if (
+      (currentChunk == null || currentChunk.key !== key) &&
+      renderShape &&
+      viewer.drawing
+    ) {
       getRegion(tree.ref, viewer.selection).then((data) => {
         setCurrentChunk((_) => ({
           key,
@@ -257,30 +261,6 @@ export default function ArrayRenderer({
   return (
     <div className="relative top-0 left-0">
       <canvas ref={baseCanvas} className="rounded" />
-      {/* <div className="absolute bottom-2 flex">
-        {array && (
-          <div className="mx-auto flex">
-            {viewer.selection.map((selector, i) => {
-              return (
-                <div key={`selection-${i}`}>
-                  {typeof selector === "number" && (
-                    <span>
-                      {array.ref.attrs["_ARRAY_DIMENSIONS"][i]}: {selector}
-                    </span>
-                  )}
-                  {selector === null && <span>{selector}</span>}
-                  {typeof selector === "object" && (
-                    <span>
-                      {array.ref.attrs["_ARRAY_DIMENSIONS"][i]}: {selector[0]}:{" "}
-                      {selector[1]}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div> */}
     </div>
   );
 }

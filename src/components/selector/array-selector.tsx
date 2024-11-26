@@ -5,6 +5,7 @@ import {
   useApplicationState,
   ZarrView,
 } from "@/state";
+import { CommandIcon, CornerDownLeft, Plus } from "lucide-react";
 import React, {
   useRef,
   useEffect,
@@ -85,7 +86,19 @@ const handleKeydown =
         };
       }
 
-      if (e.key === "Enter" && !e.repeat) {
+      if (e.key === "Enter" && !e.repeat && !e.metaKey) {
+        const nextIdx = (prev.activeDim + 1) % numDims;
+        const nextInput = inputs[nextIdx];
+        nextInput.focus();
+
+        return {
+          ...prev,
+          activeDim: nextIdx,
+          focus: "input",
+        };
+      }
+
+      if (e.key === "Enter" && !e.repeat && e.metaKey) {
         const nextIdx = (prev.activeDim + 1) % numDims;
         const nextInput = inputs[nextIdx];
         nextInput.focus();
@@ -146,6 +159,9 @@ export default function ArraySelector({
 
   const setFocusData = useApplicationState((state) => state.setFocusData);
   const updateViewer = useApplicationState((state) => state.updateViewer);
+  const setViewerShouldDraw = useApplicationState(
+    (state) => state.setViewerShouldDraw
+  );
 
   const store = stores[viewer.store];
 
@@ -262,6 +278,9 @@ export default function ArraySelector({
        * NOTE(Nic): very simple and bad validation for now. We have to update the selection
        * by replacing the array because otherwise the state watchers won't trigger properly :C
        */
+      /**
+       * TODO(Nic): add heuristics about whether the view should draw here...
+       */
       if (val.indexOf(":") !== -1) {
         const slice = val.split(":");
         if (slice.length !== 2) {
@@ -283,8 +302,8 @@ export default function ArraySelector({
             j === i ? [parseInt(slice[0]), parseInt(slice[1])] : v
           );
         }
+        newViewerSpec.drawing = false;
       } else {
-        console.log("is a number");
         newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
           j === i ? parseInt(val) : v
         );
@@ -292,6 +311,11 @@ export default function ArraySelector({
 
       updateViewer(viewerIdx, newViewerSpec);
     }
+  };
+
+  const handleShouldDraw = () => {
+    // TODO(Nic): validate
+    setViewerShouldDraw(viewerIdx, true);
   };
 
   return (
@@ -370,6 +394,17 @@ export default function ArraySelector({
           </div>
         );
       })}
+      <div
+        onMouseDown={handleShouldDraw}
+        className={cn(
+          "flex items-center mr-2 last:mr-0",
+          "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
+        )}
+      >
+        <CommandIcon size={18} />
+        <Plus size={18} />
+        <CornerDownLeft size={18} />
+      </div>
     </div>
   );
 }

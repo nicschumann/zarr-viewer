@@ -53,8 +53,10 @@ export default function App() {
                 />
               );
             })}
-            <div className="absolute top-2 right-2 bg-blue-300 p-1 px-3 rounded text-xs">
-              <span>focus: {focusState.region}</span>
+            <div className="absolute flex top-2 right-2 ">
+              <span className="bg-blue-300 p-1 px-3 rounded text-xs">
+                focus: {focusState.region}
+              </span>
             </div>
           </section>
         </div>

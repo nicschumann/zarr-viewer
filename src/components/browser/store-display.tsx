@@ -32,6 +32,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
       const numDims = node.ref.shape.length;
       const viewSpec: ZarrView = {
         state: "uninitialized",
+        drawing: false,
         store: uri,
         path: node.path,
         selection: node.ref.shape.map((length) => 0),

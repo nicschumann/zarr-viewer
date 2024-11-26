@@ -43,6 +43,11 @@ export default function ArrayEditor({
             className="absolute top-[50%] left-[50%]"
             style={{ transform: `translate(-50%,-50%)` }}
           />
+          <div className="absolute flex bottom-2 right-2">
+            <span className="bg-red-300 p-1 px-3 rounded text-xs">
+              {viewer.drawing ? "drawing" : "paused"}
+            </span>
+          </div>
         </div>
       </div>
     </div>

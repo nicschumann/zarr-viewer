@@ -41,6 +41,7 @@ export type ZarrView = {
   // NOTE(Nic): path pointing at array variable we want to visualize
   // should be a key in the .store's keys object.
   state: "initialized" | "uninitialized";
+  drawing: boolean;
   //
   store: string;
   path: string;
@@ -83,6 +84,7 @@ interface ApplicationState {
   addStore: (zarrStore: ZarrStore) => void;
   addViewer: (viewerSpec: ZarrView) => void;
   updateViewer: (index: number, viewerSpec: ZarrView) => void;
+  setViewerShouldDraw: (index: number, shouldDraw: boolean) => void;
   setFocusData: (focusState: FocusState) => void;
 }
 
@@ -109,6 +111,13 @@ export const useApplicationState = create<ApplicationState>()(
       set((state) => {
         if (index >= 0 && index < state.viewers.length) {
           state.viewers[index] = viewerSpec;
+        }
+      });
+    },
+    setViewerShouldDraw(index, shouldDraw) {
+      set((state) => {
+        if (index >= 0 && index < state.viewers.length) {
+          state.viewers[index].drawing = shouldDraw;
         }
       });
     },
