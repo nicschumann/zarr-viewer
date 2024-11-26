@@ -29,10 +29,16 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
     if (node.type === "group") {
       setExpanded(!expanded);
     } else {
+      const numDims = node.ref.shape.length;
       const viewSpec: ZarrView = {
         state: "uninitialized",
         store: uri,
         path: node.path,
+        selection: node.ref.shape.map((length) => 0),
+        mapping: {
+          x: numDims > 0 ? numDims - 1 : undefined,
+          y: numDims > 1 ? numDims - 2 : undefined,
+        },
       };
 
       addViewer(viewSpec);

@@ -30,15 +30,14 @@ export default function ArrayEditor({
           }}
         >
           {/* this is where the rendering component should go, with a ref to its parent container so it can set its size properly. */}
-          {viewer.state === "uninitialized" && (
-            <ArraySelector
-              viewer={viewer}
-              viewerIdx={viewerIdx}
-              active={true}
-              className="absolute top-[50%] left-[50%]"
-              style={{ transform: `translate(-50%,-50%)` }}
-            />
-          )}
+
+          <ArraySelector
+            viewer={viewer}
+            viewerIdx={viewerIdx}
+            active={true}
+            className="absolute top-[50%] left-[50%]"
+            style={{ transform: `translate(-50%,-50%)` }}
+          />
 
           {/* This is where any additional controls should go. */}
         </div>

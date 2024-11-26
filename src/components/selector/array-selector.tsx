@@ -13,6 +13,7 @@ import React, {
   SetStateAction,
   MutableRefObject,
   FocusEvent,
+  ChangeEvent,
 } from "react";
 
 type IArraySelectorProps = {
@@ -108,7 +109,7 @@ const handleFocus =
     inputIndex: number,
     focusRegion: ApplicationUIZone
   ) =>
-  (e: FocusEvent) => {
+  (_: FocusEvent) => {
     if (focusRegion !== "selector")
       // NOTE(Nic): this should take the current viewer index as a param as well.
       setFocusData({
@@ -129,10 +130,13 @@ type LocalUIData = {
   errorDims: number[];
 };
 
+function isIntegerOrSlice(input) {
+  return /^(\d+)(?::(\d+)?)?$/.test(input);
+}
+
 export default function ArraySelector({
   viewer,
   viewerIdx,
-  active,
   className,
   style,
 }: IArraySelectorProps) {
@@ -141,6 +145,7 @@ export default function ArraySelector({
   const focus = useApplicationState((state) => state.ui.focus);
 
   const setFocusData = useApplicationState((state) => state.setFocusData);
+  const updateViewer = useApplicationState((state) => state.updateViewer);
 
   const store = stores[viewer.store];
 
@@ -196,7 +201,7 @@ export default function ArraySelector({
   /**
    * NOTE(Nic): Name Heuristics could be implemented here...
    */
-  const names = dims.map((len, i) =>
+  const names = dims.map((_, i) =>
     typeof tree.ref.attrs._ARRAY_DIMENSIONS !== "undefined"
       ? (tree.ref.attrs._ARRAY_DIMENSIONS[i] as string)
       : "unnamed"
@@ -237,7 +242,57 @@ export default function ArraySelector({
     return () => {
       window.removeEventListener("keydown", localKeydownHandler);
     };
-  }, [active, focus.region, dims]);
+  }, [focus.region, dims]);
+
+  const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!isIntegerOrSlice(val)) {
+      setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
+    } else {
+      setLocalUI((p) => ({
+        ...p,
+        errorDims: p.errorDims.filter((dim) => dim !== i),
+      }));
+
+      const newViewerSpec: ZarrView = {
+        ...viewer,
+      };
+
+      /**
+       * NOTE(Nic): very simple and bad validation for now. We have to update the selection
+       * by replacing the array because otherwise the state watchers won't trigger properly :C
+       */
+      if (val.indexOf(":") !== -1) {
+        const slice = val.split(":");
+        if (slice.length !== 2) {
+          setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
+        } else if (slice[0] === "" && slice[1] === "") {
+          newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
+            j === i ? null : v
+          );
+        } else if (slice[0].length > 0 && slice[1] === "") {
+          newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
+            j === i ? [parseInt(slice[0]), dims[i]] : v
+          );
+        } else if (slice[0] === "" && slice[1].length > 0) {
+          newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
+            j === i ? [0, parseInt(slice[1])] : v
+          );
+        } else {
+          newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
+            j === i ? [parseInt(slice[0]), parseInt(slice[1])] : v
+          );
+        }
+      } else {
+        console.log("is a number");
+        newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
+          j === i ? parseInt(val) : v
+        );
+      }
+
+      updateViewer(viewerIdx, newViewerSpec);
+    }
+  };
 
   return (
     <div
@@ -254,7 +309,8 @@ export default function ArraySelector({
               "border-2 border-input border-gray-300 rounded-md bg-white",
               focus.region === "selector" && localUI.activeDim === i
                 ? "border-gray-400"
-                : ""
+                : "",
+              localUI.errorDims.includes(i) ? "border-red-400" : ""
             )}
           >
             {/* metadata above */}
@@ -300,6 +356,7 @@ export default function ArraySelector({
                   i,
                   focus.region
                 )}
+                onChange={handleDimChange(i)}
                 defaultValue={0}
                 min={0}
                 max={dim}
