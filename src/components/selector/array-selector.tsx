@@ -318,7 +318,7 @@ export default function ArraySelector({
               <div className="flex mx-auto">
                 <span>{names[i]}</span>
 
-                {viewer.state === "initialized" && viewer.mapping.x === i && (
+                {viewer.mapping.x === i && (
                   <span
                     // drag target
                     className="block ml-2 h-[16px] w-[16px] bg-red-300 text-red-700  rounded-sm text-xs uppercase text-center"
@@ -326,7 +326,7 @@ export default function ArraySelector({
                     X
                   </span>
                 )}
-                {viewer.state === "initialized" && viewer.mapping.y === i && (
+                {viewer.mapping.y === i && (
                   <span
                     // drag target
                     className="block ml-2 h-[16px] w-[16px] bg-blue-300 text-blue-700 rounded-sm text-xs uppercase text-center"
@@ -334,13 +334,12 @@ export default function ArraySelector({
                     Y
                   </span>
                 )}
-                {viewer.state === "uninitialized" ||
-                  (viewer.mapping.x !== i && viewer.mapping.y !== i && (
-                    <span
-                      // drag target
-                      className="block ml-2 h-[16px] w-[16px] border border-gray-300 rounded-sm"
-                    ></span>
-                  ))}
+                {viewer.mapping.x !== i && viewer.mapping.y !== i && (
+                  <span
+                    // drag target
+                    className="block ml-2 h-[16px] w-[16px] border border-gray-300 rounded-sm"
+                  ></span>
+                )}
               </div>
             </div>
             {/* input above */}
