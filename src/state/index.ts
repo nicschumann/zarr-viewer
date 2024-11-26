@@ -35,7 +35,7 @@ export type ZarrStore = HTTPZarrStore;
 
 export type IndexType = null | number | [number, number]; // no striding
 
-export type DimensionMapping = { x: string; y?: string };
+export type DimensionMapping = { x: number; y?: number };
 
 export type ZarrView =
   | {
@@ -64,8 +64,22 @@ export type FocusState =
       target: "add" | "store";
       storeIdx: number;
     }
-  | { region: "selector" }
+  | {
+      region: "selector";
+      viewerIdx: number;
+    }
   | { region: "editor" };
+
+// type SelectorState = {
+//   names: string[];
+//   dims: number[];
+//   mapping: { x: number; y: number; prev: "x" | "y" };
+//   ui: {
+//     activeDim: number;
+//     focus: "input" | "axis" | "none";
+//     errorDims: number[];
+//   };
+// };
 
 interface ApplicationState {
   ui: {

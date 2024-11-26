@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState, ZarrStore, ZarrTree, ZarrView } from "@/state";
 import { Box, Boxes, ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 
 interface IStoreDisplayProps {
   store: ZarrStore;
@@ -20,6 +20,8 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
   level = 0,
   addViewer,
 }) => {
+  const numViewers = useApplicationState((state) => state.viewers.length);
+  const setFocusData = useApplicationState((state) => state.setFocusData);
   const [expanded, setExpanded] = useState(false);
   const type = node.type;
 
@@ -34,6 +36,10 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
       };
 
       addViewer(viewSpec);
+      setFocusData({
+        region: "selector",
+        viewerIdx: numViewers,
+      });
     }
   };
 

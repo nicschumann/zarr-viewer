@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
-import { ApplicationUIZone, FocusState, useApplicationState } from "@/state";
+import {
+  ApplicationUIZone,
+  FocusState,
+  useApplicationState,
+  ZarrView,
+} from "@/state";
 import React, {
   useRef,
   useEffect,
@@ -11,19 +16,10 @@ import React, {
 } from "react";
 
 type IArraySelectorProps = {
+  viewer: ZarrView;
+  viewerIdx: number;
   active: boolean;
 } & React.ComponentProps<"div">;
-
-type SelectorState = {
-  names: string[];
-  dims: number[];
-  mapping: { x: number; y: number; prev: "x" | "y" };
-  ui: {
-    activeDim: number;
-    focus: "input" | "axis" | "none";
-    errorDims: number[];
-  };
-};
 
 const getInputElements = (
   parent: MutableRefObject<HTMLDivElement>
@@ -33,7 +29,8 @@ const getInputElements = (
 
 const handleKeydown =
   (
-    set: Dispatch<SetStateAction<SelectorState>>,
+    numDims: number,
+    setLocalUI: Dispatch<SetStateAction<LocalUIData>>,
     parent: MutableRefObject<HTMLDivElement>
   ) =>
   (e: KeyboardEvent) => {
@@ -46,12 +43,12 @@ const handleKeydown =
     )
       return;
 
-    set((prev) => {
-      const inputs = parent.current.querySelectorAll("input");
+    setLocalUI((prev) => {
+      const inputs = getInputElements(parent);
 
-      if (inputs.length !== prev.dims.length) return prev;
-      if (inputs.length <= prev.ui.activeDim) return prev;
-      const currIdx = prev.ui.activeDim;
+      if (inputs.length !== numDims) return prev;
+      if (inputs.length <= prev.activeDim) return prev;
+      const currIdx = prev.activeDim;
 
       if (e.key === "Escape" && !e.repeat) {
         const currInput = inputs[currIdx];
@@ -59,60 +56,43 @@ const handleKeydown =
 
         return {
           ...prev,
-
-          ui: {
-            ...prev.ui,
-            focus: "none",
-          },
+          focus: "none",
         };
       }
 
-      if (e.key === "ArrowRight" && !e.repeat && prev.ui.focus !== "input") {
-        const nextIdx = (prev.ui.activeDim + 1) % prev.dims.length;
+      if (e.key === "ArrowRight" && !e.repeat && prev.focus !== "input") {
+        const nextIdx = (prev.activeDim + 1) % numDims;
         const nextInput = inputs[nextIdx];
         nextInput.focus();
 
         return {
           ...prev,
-
-          ui: {
-            ...prev.ui,
-            activeDim: nextIdx,
-            focus: "input",
-          },
+          activeDim: nextIdx,
+          focus: "input",
         };
       }
 
-      if (e.key === "ArrowLeft" && !e.repeat && prev.ui.focus !== "input") {
-        const prevIdx =
-          (prev.ui.activeDim - 1 + prev.dims.length) % prev.dims.length;
+      if (e.key === "ArrowLeft" && !e.repeat && prev.focus !== "input") {
+        const prevIdx = (prev.activeDim - 1 + numDims) % numDims;
         const prevInput = inputs[prevIdx];
         prevInput.focus();
 
         return {
           ...prev,
-
-          ui: {
-            ...prev.ui,
-            activeDim: prevIdx,
-            focus: "input",
-          },
+          activeDim: prevIdx,
+          focus: "input",
         };
       }
 
       if (e.key === "Enter" && !e.repeat) {
-        const nextIdx = (prev.ui.activeDim + 1) % prev.dims.length;
+        const nextIdx = (prev.activeDim + 1) % numDims;
         const nextInput = inputs[nextIdx];
         nextInput.focus();
 
         return {
           ...prev,
-
-          ui: {
-            ...prev.ui,
-            activeDim: nextIdx,
-            focus: "input",
-          },
+          activeDim: nextIdx,
+          focus: "input",
         };
       }
 
@@ -122,75 +102,142 @@ const handleKeydown =
 
 const handleFocus =
   (
-    set: Dispatch<SetStateAction<SelectorState>>,
     setFocusData: (focusState: FocusState) => void,
+    setLocalUI: Dispatch<SetStateAction<LocalUIData>>,
+    viewerIdx: number,
     inputIndex: number,
     focusRegion: ApplicationUIZone
   ) =>
   (e: FocusEvent) => {
-    if (focusRegion !== "selector") setFocusData({ region: "selector" });
+    if (focusRegion !== "selector")
+      // NOTE(Nic): this should take the current viewer index as a param as well.
+      setFocusData({
+        region: "selector",
+        viewerIdx,
+      });
 
-    set((prev) => {
-      return {
-        ...prev,
-
-        ui: {
-          ...prev.ui,
-          focus: "input",
-          activeDim: inputIndex,
-        },
-      };
-    });
+    setLocalUI((prev) => ({
+      ...prev,
+      activeDim: inputIndex,
+      part: "input",
+    }));
   };
 
+type LocalUIData = {
+  activeDim: number;
+  focus: "input" | "axis" | "none";
+  errorDims: number[];
+};
+
 export default function ArraySelector({
+  viewer,
+  viewerIdx,
   active,
   className,
   style,
 }: IArraySelectorProps) {
-  /**
-   * This will later be pulled out as a prop.
-   */
-  const [selectorState, setSelectorState] = useState<SelectorState>({
-    names: ["time", "channels", "lat", "lon"],
-    dims: [1400, 1, 16000, 9000],
-    mapping: { x: 3, y: 2, prev: "x" },
-    ui: {
-      activeDim: 0,
-      focus: "input",
-      errorDims: [],
-    },
-  });
-
   const containerRef = useRef<HTMLDivElement>(null);
+  const stores = useApplicationState((state) => state.stores);
+  const focus = useApplicationState((state) => state.ui.focus);
 
-  const focusRegion = useApplicationState((state) => state.ui.focus.region);
   const setFocusData = useApplicationState((state) => state.setFocusData);
 
+  const store = stores[viewer.store];
+
+  /**
+   * Return an error if there's no such store for this viewer
+   */
+  if (typeof store === "undefined") {
+    return (
+      <div
+        ref={containerRef}
+        className={cn("flex w-fit", className)}
+        style={style}
+      >
+        <div>No Such Store: {viewer.store}</div>
+      </div>
+    );
+  }
+
+  const tree = store.keys[viewer.path];
+
+  /**
+   * Return an error if the view requests a key that's not defined in the store.
+   */
+  if (typeof tree === "undefined") {
+    return (
+      <div
+        ref={containerRef}
+        className={cn("flex w-fit", className)}
+        style={style}
+      >
+        <div>No Such Path in Store: {viewer.path}</div>
+      </div>
+    );
+  }
+
+  /**
+   * Now, make sure we're dealing with an array; it should be impossible for
+   * a viewer to select into a group.
+   */
+  if (tree.type === "group") {
+    return (
+      <div
+        ref={containerRef}
+        className={cn("flex w-fit", className)}
+        style={style}
+      >
+        <div>A selector cannot select into a group!</div>
+      </div>
+    );
+  }
+
+  const dims = tree.ref.shape;
+  /**
+   * NOTE(Nic): Name Heuristics could be implemented here...
+   */
+  const names = dims.map((len, i) =>
+    typeof tree.ref.attrs._ARRAY_DIMENSIONS !== "undefined"
+      ? (tree.ref.attrs._ARRAY_DIMENSIONS[i] as string)
+      : "unnamed"
+  );
+
+  const [localUI, setLocalUI] = useState<LocalUIData>({
+    activeDim: 0,
+    focus: "input",
+    errorDims: [],
+  });
+
+  /**
+   * NOTE(Nic): This useEffect sets up keyboard handling iff the user is focused on
+   * the current selector panel, otherwise it returns. We only run this if we've
+   * already passed all of the sanity checks above, of course.
+   */
   useEffect(() => {
     if (!containerRef.current) return;
-    if (focusRegion !== "selector") return;
+    if (focus.region !== "selector") return;
     const inputs = getInputElements(containerRef);
 
     // make sure the DOM state matches the UI proxy.
     for (let i = 0; i < inputs.length; i += 1) {
-      if (
-        selectorState.ui.activeDim == i &&
-        selectorState.ui.focus == "input"
-      ) {
+      if (localUI.activeDim == i && localUI.focus == "input") {
         inputs[i].focus();
       } else {
         inputs[i].blur();
       }
     }
 
-    const localKeydownHandler = handleKeydown(setSelectorState, containerRef);
+    const localKeydownHandler = handleKeydown(
+      dims.length,
+      setLocalUI,
+      containerRef
+    );
     window.addEventListener("keydown", localKeydownHandler);
 
     return () => {
       window.removeEventListener("keydown", localKeydownHandler);
     };
-  }, [active, focusRegion]);
+  }, [active, focus.region, dims]);
 
   return (
     <div
@@ -198,26 +245,24 @@ export default function ArraySelector({
       className={cn("flex w-fit", className)}
       style={style}
     >
-      {selectorState.dims.map((dim, i) => {
+      {dims.map((dim, i) => {
         return (
           <div
             key={`dim-${i}`}
             className={cn(
               "mr-2 last:mr-0",
               "border-2 border-input border-gray-300 rounded-md bg-white",
-              active &&
-                selectorState.ui.activeDim === i &&
-                focusRegion === "selector"
+              focus.region === "selector" && localUI.activeDim === i
                 ? "border-gray-400"
                 : ""
             )}
           >
             {/* metadata above */}
-            <div className="text-xs p-1 border-b border-gray-20">
-              <div className="flex m-auto">
-                <span>{selectorState.names[i]}</span>
+            <div className="flex text-xs p-1 border-b border-gray-20">
+              <div className="flex mx-auto">
+                <span>{names[i]}</span>
 
-                {selectorState.mapping.x === i && (
+                {viewer.state === "initialized" && viewer.mapping.x === i && (
                   <span
                     // drag target
                     className="block ml-2 h-[16px] w-[16px] bg-red-300 text-red-700  rounded-sm text-xs uppercase text-center"
@@ -225,7 +270,7 @@ export default function ArraySelector({
                     X
                   </span>
                 )}
-                {selectorState.mapping.y === i && (
+                {viewer.state === "initialized" && viewer.mapping.y === i && (
                   <span
                     // drag target
                     className="block ml-2 h-[16px] w-[16px] bg-blue-300 text-blue-700 rounded-sm text-xs uppercase text-center"
@@ -233,13 +278,13 @@ export default function ArraySelector({
                     Y
                   </span>
                 )}
-                {selectorState.mapping.x !== i &&
-                  selectorState.mapping.y !== i && (
+                {viewer.state === "uninitialized" ||
+                  (viewer.mapping.x !== i && viewer.mapping.y !== i && (
                     <span
                       // drag target
                       className="block ml-2 h-[16px] w-[16px] border border-gray-300 rounded-sm"
                     ></span>
-                  )}
+                  ))}
               </div>
             </div>
             {/* input above */}
@@ -249,10 +294,11 @@ export default function ArraySelector({
                   "flex h-7 w-[10ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
                 onFocus={handleFocus(
-                  setSelectorState,
                   setFocusData,
+                  setLocalUI,
+                  viewerIdx,
                   i,
-                  focusRegion
+                  focus.region
                 )}
                 defaultValue={0}
                 min={0}

@@ -47,6 +47,7 @@ export default function App() {
               return (
                 <ArrayEditor
                   viewer={viewer}
+                  viewerIdx={i}
                   key={`viewer-${i}`}
                   sidebarWidth={sidebarWidth}
                 />
