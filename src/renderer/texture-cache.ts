@@ -18,14 +18,18 @@ export class TextureCache {
       // NOTE(Nic): update texture in place w/ new data.
 
       const tex = this.textures[key];
-      tex.subimage(data, 0, 0);
+      tex.subimage(
+        data.map((v) => (isNaN(v) ? 0.0 : v)),
+        0,
+        0
+      );
       return tex;
     } else {
       // NOTE(Nic): allocate a new texture.
       const tex = this.regl.texture({
         format: "luminance",
         type: "float",
-        data,
+        data: data.map((v) => (isNaN(v) ? 0.0 : v)),
         width: shape[0],
         height: shape[1],
         flipY: true,

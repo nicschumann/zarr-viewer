@@ -13,7 +13,13 @@ const buildtree = (
   contents: (zarr.Array<zarr.DataType, any> | zarr.Group<any>)[]
 ): { tree: ZarrTree; keys: { [name: string]: ZarrTree } } => {
   const uriParts = uri.split("/");
-  const storeName = uriParts[uriParts.length - 1];
+  console.log(uriParts);
+
+  const storeName =
+    uriParts[uriParts.length - 1].length > 0 // handle trailing slash...
+      ? uriParts[uriParts.length - 1]
+      : uriParts[uriParts.length - 2];
+
   const parts = contents.map((value) =>
     (storeName + value.path).split("/").filter((v) => v)
   );
@@ -60,10 +66,27 @@ const buildtree = (
     });
   });
 
+  console.log(subtrees);
+  console.log(contents);
+  console.log(storeName);
+
   return { tree: subtrees[storeName], keys };
 };
 
-export const read = async (uri: string) => {
+type ReadStoreError = {
+  type: "error";
+  message: string;
+};
+
+export const resultIsError = (
+  storeOrError: ZarrStore | ReadStoreError
+): storeOrError is ReadStoreError => {
+  return storeOrError.type === "error";
+};
+
+export const readStore = async (
+  uri: string
+): Promise<ZarrStore | ReadStoreError> => {
   try {
     let zarrStore = await zarr.tryWithConsolidated(new zarr.FetchStore(uri));
     let root = await zarr.open(zarrStore);
@@ -121,6 +144,9 @@ export const read = async (uri: string) => {
     // const arr = await zarr.open(zarrStore);
     // console.log(arr);
   } catch (e) {
-    console.log(e);
+    return {
+      type: "error",
+      message: e.message,
+    };
   }
 };

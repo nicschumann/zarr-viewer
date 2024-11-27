@@ -1,14 +1,9 @@
 import * as zarr from "zarrita";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { read } from "./read-metadata";
+import { readStore } from "./read-metadata";
 
 export type ZarrObject = zarr.Array<zarr.DataType, any> | zarr.Group<any>;
-
-export type ZarrEmpty = {
-  type: "empty";
-  children: { [name: string]: ZarrTree };
-};
 
 export type ZarrGroup = {
   type: "group";
@@ -26,7 +21,7 @@ export type ZarrArray = {
   children: { [name: string]: ZarrTree };
 };
 
-export type ZarrTree = ZarrGroup | ZarrArray | ZarrEmpty;
+export type ZarrTree = ZarrGroup | ZarrArray;
 
 export type HTTPZarrStore = {
   type: "http";
@@ -36,54 +31,104 @@ export type HTTPZarrStore = {
   tree: ZarrTree;
 };
 
-export type Uninitialized = {
-  type: "uninitialized";
-  keys: {};
-};
-
-export type ZarrStore = HTTPZarrStore | Uninitialized;
+export type ZarrStore = HTTPZarrStore;
 
 export type IndexType = null | number | [number, number]; // no striding
 
-export type DimensionMapping = { x: string; y?: string };
+export type DimensionMapping = { x: number; y?: number };
 
-export type ZarrViewer = {
+export type ZarrView = {
   // NOTE(Nic): path pointing at array variable we want to visualize
   // should be a key in the .store's keys object.
+  state: "initialized" | "uninitialized";
+  drawing: boolean;
+  //
+  store: string;
   path: string;
+  //
   selection: IndexType[];
-  mapping: number[]; // this maps array dims (u, v, w, ...) to layout dims (x, y)
+  mapping: DimensionMapping; // this maps array dims (u, v, w, ...) to layout dims (x, y)
 };
 
+export type ApplicationUIZone = "browser" | "selector" | "editor";
+
+export type FocusState =
+  | {
+      region: "browser";
+      target: "add" | "store";
+      storeIdx: number;
+    }
+  | {
+      region: "selector";
+      viewerIdx: number;
+    }
+  | { region: "editor" };
+
+// type SelectorState = {
+//   names: string[];
+//   dims: number[];
+//   mapping: { x: number; y: number; prev: "x" | "y" };
+//   ui: {
+//     activeDim: number;
+//     focus: "input" | "axis" | "none";
+//     errorDims: number[];
+//   };
+// };
+
 interface ApplicationState {
-  store: ZarrStore;
-  viewers: ZarrViewer[];
-  readHTTPStore: (uri: string) => Promise<void>;
-  addViewer: (viewerSpec: ZarrViewer) => void;
+  ui: {
+    focus: FocusState;
+  };
+  stores: { [name: string]: ZarrStore };
+  viewers: ZarrView[];
+  addStore: (zarrStore: ZarrStore) => void;
+  addViewer: (viewerSpec: ZarrView) => void;
+  updateViewer: (index: number, viewerSpec: ZarrView) => void;
+  setViewerShouldDraw: (index: number, shouldDraw: boolean) => void;
+  setFocusData: (focusState: FocusState) => void;
 }
 
 export const useApplicationState = create<ApplicationState>()(
   immer((set) => ({
-    // NOTE(Nic): maybe you should be able to view and walk multiple stores?
     // state:
-    store: {
-      type: "uninitialized",
-      keys: {},
-      tree: { type: "empty", children: {} },
+    ui: {
+      focus: {
+        region: "browser",
+        target: "add",
+        storeIdx: -1,
+      },
     },
+    stores: {},
     viewers: [],
 
     // state update methods:
     addViewer(viewerSpec) {
       set((state) => {
-        state.viewers = [viewerSpec];
+        state.viewers.push(viewerSpec);
       });
     },
-    async readHTTPStore(uri) {
-      const result = await read(uri);
-
+    updateViewer(index, viewerSpec) {
       set((state) => {
-        state.store = result;
+        if (index >= 0 && index < state.viewers.length) {
+          state.viewers[index] = viewerSpec;
+        }
+      });
+    },
+    setViewerShouldDraw(index, shouldDraw) {
+      set((state) => {
+        if (index >= 0 && index < state.viewers.length) {
+          state.viewers[index].drawing = shouldDraw;
+        }
+      });
+    },
+    addStore(zarrStore) {
+      set((state) => {
+        state.stores[zarrStore.uri] = zarrStore;
+      });
+    },
+    setFocusData(focusState) {
+      set((state) => {
+        state.ui.focus = focusState;
       });
     },
   }))
