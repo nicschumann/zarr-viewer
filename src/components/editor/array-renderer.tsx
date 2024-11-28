@@ -174,6 +174,29 @@ export default function ArrayRenderer({
     setRegl((_) => localRegl);
     setShaders((_) => compileShaders(localRegl));
     setTextures(new TextureCache(localRegl));
+
+    const resizeObserver = new ResizeObserver(() => {
+      const rect = parentElement.current.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Set the canvas style size (CSS pixels)
+      baseCanvas.current.style.width = `${rect.width}px`;
+      baseCanvas.current.style.height = `${rect.height}px`;
+
+      // Set the canvas internal size (actual pixels)
+      baseCanvas.current.width = rect.width * dpr;
+      baseCanvas.current.height = rect.height * dpr;
+
+      // Update the WebGL viewport
+      localRegl.poll();
+    });
+
+    resizeObserver.observe(parentElement.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      localRegl.destroy();
+    };
   }, [parentElement.current]);
 
   /**
@@ -222,13 +245,13 @@ export default function ArrayRenderer({
           // update canvas if needed
           const { width, height } =
             parentElement.current.getBoundingClientRect();
-          baseCanvas.current.width = width;
-          baseCanvas.current.height = height;
 
           const aspect = renderShape[0] / renderShape[1];
           const zoom = 1;
           const matrix = getMatrix(aspect, zoom, [width, height]);
           const normalization = currentChunk.bounds.max;
+
+          // console.log(width, height);
 
           // NOTE(Nic): this is for drawing 2D selections only...
 
@@ -259,7 +282,7 @@ export default function ArrayRenderer({
   }, [regl, shaders, currentChunk, viewer, tree, parentElement.current]);
 
   return (
-    <div className="relative top-0 left-0">
+    <div className="relative top-0 left-0 bg-black">
       <canvas ref={baseCanvas} className="rounded" />
     </div>
   );
