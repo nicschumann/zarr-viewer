@@ -7,6 +7,32 @@ import {
   ZarrStore,
   ZarrTree,
 } from "@/state";
+import { ArrayIndexer, CoordsMap, DateArrayIndexer, getIdxForSingleArr } from "@/lib/larray";
+
+const getCoords = async(root, keys: { [key: string]: ZarrTree }) => {
+  // populate coords mapping for the store
+  // TODO(oli): include store + group prefix in coord keys
+  debugger;
+  const coords = {}
+  for (let [k, v] of Object.entries(keys)) {
+    if (v.type == "array") {
+      const dims = v.ref.attrs._ARRAY_DIMENSIONS;
+      if (!Array.isArray(dims)) {
+        throw new Error("Dims is not an array");
+      }
+      for (const dimName of dims) {
+        if (dimName in coords) {
+          continue;
+        }
+        const coordArray = await zarr.open(root.resolve(`/${dimName}`), {
+          kind: "array",
+        });
+        coords[dimName] = await getIdxForSingleArr(dimName, coordArray);
+      }
+    }
+  }
+  return coords;
+}
 
 const buildtree = (
   uri: string,
@@ -103,15 +129,16 @@ export const readStore = async (
 
       const { tree, keys } = buildtree(uri, data);
 
-      // console.log(data);
+      const coords = await getCoords(root, keys);
+
       const result: ZarrStore = {
         type: "http",
         uri,
         loaded: true,
         keys,
         tree,
+        coords
       };
-
       return result;
     } catch (e) {
       // object is an array
@@ -130,12 +157,15 @@ export const readStore = async (
         children: {},
       };
 
+      const coords = await getCoords(root, { [record.path]: record });
+
       const result: ZarrStore = {
         type: "http",
         uri,
         loaded: true,
         keys: { [record.path]: record },
         tree: record,
+        coords
       };
 
       return result;

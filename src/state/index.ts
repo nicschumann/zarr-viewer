@@ -2,6 +2,7 @@ import * as zarr from "zarrita";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { readStore } from "./read-metadata";
+import { CoordsMap } from "@/lib/larray";
 
 export type ZarrObject = zarr.Array<zarr.DataType, any> | zarr.Group<any>;
 
@@ -29,6 +30,8 @@ export type HTTPZarrStore = {
   loaded: boolean;
   keys: { [key: string]: ZarrTree };
   tree: ZarrTree;
+  // TODO(Oli): Consider making this optional/lazily populated.
+  coords: CoordsMap | null;
 };
 
 export type ZarrStore = HTTPZarrStore;

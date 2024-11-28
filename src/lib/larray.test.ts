@@ -1,9 +1,10 @@
-// sum.test.js
 import { expect, test } from 'vitest'
 import ndarray from "ndarray";
-import { ArrayIndexer, coordsFromZarr, Slice, num2date } from './larray.js'
+import { ArrayIndexer, coordsFromZarr, Slice, StringArrayIndexer } from './larray.js'
 import * as zarr from "zarrita";
 import { get, slice } from "@zarrita/indexing";
+import { readStore  } from '../state/read-metadata.js';
+import { UnicodeStringArray } from "@zarrita/typedarray"
 
 function* range(
 	start: number,
@@ -89,6 +90,23 @@ test('indexer get zarr array slices', async () => {
   expect(first.sel(300).zindex).toEqual(null);
 })
 
+test('str indexer', async () => {
+  const array = [10, 20, 30, 40, 50, 60, 70, 80, 90].map(String);
+  const idxr = new ArrayIndexer(array);
+  const first = idxr.sel("20")
+  expect(first.vals).toEqual(["20"])
+  expect(first.valHuman(0)).toEqual("20");
+})
+
+test('UnicodeStringArray indexer', async () => {
+  const array = new UnicodeStringArray(5, ["a", "b", "c", "d", "e"]);
+  const idxr = new ArrayIndexer(array);
+  const first = idxr.sel("b")
+  expect(first.vals).toEqual(["b"])
+  const second = idxr.isel(0);
+  expect(second.vals).toEqual(["a"])
+  expect(idxr.valHuman(4)).toEqual("e");
+})
 
 test('coordsFromZarr', async () => {
   // create a populated array
@@ -106,16 +124,15 @@ test('coordsFromZarr', async () => {
   expect(filtered.vals).toEqual([20, 25, 30, 35, 40, 45]);
   const filteredData = await zarr.get(testArr, [slice(filtered.zindex[0], filtered.zindex[1])])
   expect(filteredData.data).toEqual(new Int32Array([20, 25, 30, 35, 40, 45]));
-
 });
 
 test('realStore', async () => {
   // create a populated array
   const storePath = "http://localhost:3001/goes-fog-tomorrow-0.01-5min.zarr/";
+
   let store = await zarr.withConsolidated(new zarr.FetchStore(storePath));
   const node = await zarr.open.v2(store);
   const arr = await zarr.open.v2(node.resolve('/X'), { kind: "array" });
-
   // generate coord map from array
   const coordMap = await coordsFromZarr(arr);
   const slice: Slice = {start: new Date('2016-01-01'), stop: new Date('2016-01-05')}
