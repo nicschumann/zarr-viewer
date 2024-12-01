@@ -83,6 +83,7 @@ interface ApplicationState {
   viewers: ZarrView[];
   addStore: (zarrStore: ZarrStore) => void;
   addViewer: (viewerSpec: ZarrView) => void;
+  removeViewer: (viewerIdx: number) => void;
   updateViewer: (index: number, viewerSpec: ZarrView) => void;
   setViewerShouldDraw: (index: number, shouldDraw: boolean) => void;
   setFocusData: (focusState: FocusState) => void;
@@ -105,6 +106,11 @@ export const useApplicationState = create<ApplicationState>()(
     addViewer(viewerSpec) {
       set((state) => {
         state.viewers.push(viewerSpec);
+      });
+    },
+    removeViewer(viewerIdx) {
+      set((state) => {
+        state.viewers = state.viewers.filter((v, idx) => idx !== viewerIdx);
       });
     },
     updateViewer(index, viewerSpec) {

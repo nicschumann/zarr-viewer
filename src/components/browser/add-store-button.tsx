@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState } from "@/state";
 import { readStore, resultIsError } from "@/state/read-metadata";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import React, { HTMLProps, useEffect, useRef, useState } from "react";
 
 type ComponentUIState = {
@@ -104,15 +104,15 @@ export default function AddStoreButton({
           />
           {uiState.state === "error" && (
             <div
-              className="bg-red-600 font-bold rounded-sm px-1 py-[3px] absolute top-0 right-0 text-red-100 z-10"
+              className="bg-red-600 flex items-center font-bold rounded-sm px-2 py-1 absolute top-0 right-0 text-red-100 z-10"
               style={{ transform: `translate(50%, -75%)` }}
             >
               Error!
               <span
                 onClick={() => setUIState({ state: "normal" })}
-                className="ml-3 font-normal"
+                className="ml-5 font-normal hover:bg-white rounded-full p-0.5 hover:text-red-600"
               >
-                [x]
+                <X size={16} />
               </span>
             </div>
           )}

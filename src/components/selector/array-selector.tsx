@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   ApplicationUIZone,
   FocusState,
+  IndexType,
   useApplicationState,
   ZarrView,
 } from "@/state";
@@ -147,6 +148,14 @@ function isIntegerOrSlice(input) {
   return /^(\d+)(?::(\d+)?)?$/.test(input);
 }
 
+function stringifySelection(index: IndexType) {
+  if (typeof index === "number") return index.toFixed(0);
+  else if (index === null) return ":";
+  else if (typeof index === "object") return index.join(":");
+
+  return "";
+}
+
 export default function ArraySelector({
   viewer,
   viewerIdx,
@@ -259,6 +268,15 @@ export default function ArraySelector({
       window.removeEventListener("keydown", localKeydownHandler);
     };
   }, [focus.region, dims]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const inputs = getInputElements(containerRef);
+
+    for (let i = 0; i < inputs.length; i += 1) {
+      inputs[i].value = stringifySelection(viewer.selection[i]);
+    }
+  }, [viewer]);
 
   const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -394,17 +412,19 @@ export default function ArraySelector({
           </div>
         );
       })}
-      <div
-        onMouseDown={handleShouldDraw}
-        className={cn(
-          "flex items-center mr-2 last:mr-0",
-          "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
-        )}
-      >
-        <CommandIcon size={18} />
-        <Plus size={18} />
-        <CornerDownLeft size={18} />
-      </div>
+      {!viewer.drawing && (
+        <div
+          onMouseDown={handleShouldDraw}
+          className={cn(
+            "flex items-center mr-2 last:mr-0",
+            "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
+          )}
+        >
+          <CommandIcon size={18} />
+          <Plus size={18} />
+          <CornerDownLeft size={18} />
+        </div>
+      )}
     </div>
   );
 }

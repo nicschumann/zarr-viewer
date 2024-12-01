@@ -41,18 +41,24 @@ export default function App() {
             </div>
           </section>
           {/* editors */}
-          <section className="flex">
-            {viewers.length === 0 && <div>no viewers</div>}
-            {viewers.map((viewer, i) => {
-              return (
-                <ArrayEditor
-                  viewer={viewer}
-                  viewerIdx={i}
-                  key={`viewer-${i}`}
-                  sidebarWidth={sidebarWidth}
-                />
-              );
-            })}
+          <section>
+            <div
+              className="flex"
+              style={{ width: `calc(100vw - (${sidebarWidth}))` }}
+            >
+              {viewers.length === 0 && <div>no viewers</div>}
+              {viewers.map((viewer, i) => {
+                return (
+                  <ArrayEditor
+                    viewer={viewer}
+                    viewerIdx={i}
+                    numViewers={viewers.length}
+                    key={`viewer-${i}`}
+                    sidebarWidth={sidebarWidth}
+                  />
+                );
+              })}
+            </div>
             <div className="absolute flex top-2 right-2 ">
               <span className="bg-blue-300 p-1 px-3 rounded text-xs">
                 focus: {focusState.region}

@@ -24,7 +24,6 @@ type DataCache = {
 /**
  * Rendering helpers
  */
-
 function makeKey(store: zarr.Array<any, any>, slice: IndexType[]): string {
   return `${store.path}-${slice.join("/")}`;
 }
@@ -39,6 +38,12 @@ const getRegion = async (store: zarr.Array<any, any>, index: IndexType[]) => {
 
   let chunk = await get(store, zarrIndex);
 
+  /**
+   * NOTE(Nic): for our testcases, this will always be a float32 array,
+   * but this may break if the dtype is a BoolArray...
+   */
+  // TODO(Nic): remvoe
+  // @ts-ignore
   const bounds = chunk.data.reduce(
     (prev, value) => ({
       min: Math.min(prev.min, value),
@@ -107,9 +112,11 @@ const getMatrix = (aspect: number, zoom: number, viewport: number[]) => {
     (-2.0 * size_px[1]) / (viewport[1] * window.devicePixelRatio),
   ];
 
+  // @ts-ignore
   const translation = mat3.fromTranslation([], [-0.5, -0.5]);
+  // @ts-ignore
   const scaling = mat3.fromScaling([], scalefactors);
-
+  // @ts-ignore
   return mat3.multiply([], scaling, translation);
 };
 
@@ -282,7 +289,7 @@ export default function ArrayRenderer({
   }, [regl, shaders, currentChunk, viewer, tree, parentElement.current]);
 
   return (
-    <div className="relative top-0 left-0 bg-black">
+    <div className="relative top-0 left-0 rounded bg-black">
       <canvas ref={baseCanvas} className="rounded" />
     </div>
   );
