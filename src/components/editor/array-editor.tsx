@@ -65,11 +65,18 @@ export default function ArrayEditor({
     if (focusRegion !== "editor") return;
 
     const handleKeydown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp")
-        updateAllViewers((x) => x + 1, updateViewer, viewers);
+      let op: ((x: number) => number) | false = false;
 
-      if (e.key === "ArrowDown")
-        updateAllViewers((x) => x - 1, updateViewer, viewers);
+      console.log(e.key, e.shiftKey);
+
+      if (e.key === "ArrowUp" && e.shiftKey) op = (x) => x + 5;
+      if (e.key === "ArrowUp" && !e.shiftKey) op = (x) => x + 1;
+      if (e.key === "ArrowDown" && e.shiftKey) op = (x) => x - 5;
+      if (e.key === "ArrowDown" && !e.shiftKey) op = (x) => x - 1;
+
+      if (op) {
+        updateAllViewers(op, updateViewer, viewers);
+      }
     };
 
     window.addEventListener("keydown", handleKeydown);
