@@ -215,7 +215,6 @@ export default function ArraySelector({
   }
 
   const dims = tree.ref.shape;
-  const coords = store.coords;
   /**
    * NOTE(Nic): Name Heuristics could be implemented here...
    */
@@ -321,8 +320,10 @@ export default function ArraySelector({
         sel.push(parseInt(val))
       }
 
+      const prefix = viewer.path.split('/').slice(0, -1).join('/')
+      const coordKey = [prefix, names[i]].join('/');
+      const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
       const labelTarget = e.target.parentElement.parentElement.querySelector('.label');
-      const labelIdx: ArrayIndexer = coords[names[i]];
       const targetLabelValues = sel.map(v => labelIdx.valHuman(v));
       // TODO(Oli): use react ;)
       labelTarget.innerHTML = targetLabelValues.join(' - ');
