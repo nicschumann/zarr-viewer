@@ -333,6 +333,9 @@ export default function ArraySelector({
 
   const handleShouldDraw = () => {
     // TODO(Nic): validate
+
+    // When you click should draw, we shift focus to the editor...
+    setFocusData({ region: "editor" });
     setViewerShouldDraw(viewerIdx, true);
   };
 

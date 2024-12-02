@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import ArraySelector from "../selector/array-selector";
-import { useApplicationState, ZarrView } from "@/state";
+import { IndexType, useApplicationState, ZarrView } from "@/state";
 import ArrayRenderer from "./array-renderer";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
@@ -15,6 +15,30 @@ type IArrayEditorProps = {
   numViewers: number;
 };
 
+const updateIdx = (f: (x: number) => number, idx: IndexType): IndexType => {
+  if (typeof idx === "number") return f(idx);
+  if (idx === null) return null;
+  if (typeof idx === "object") return [f(idx[0]), f(idx[1])];
+
+  return idx;
+};
+
+const updateAllViewers = (
+  op: (x: number) => number,
+  updateViewer: (i: number, v: ZarrView) => void,
+  viewers: ZarrView[]
+) => {
+  viewers.forEach((v, i) => {
+    const newSel = v.selection.map((s, j) => (j === 0 ? updateIdx(op, s) : s));
+
+    const newV: ZarrView = {
+      ...v,
+      selection: newSel,
+    };
+    updateViewer(i, newV);
+  });
+};
+
 export default function ArrayEditor({
   viewer,
   viewerIdx,
@@ -22,11 +46,38 @@ export default function ArrayEditor({
   numViewers,
 }: IArrayEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const viewers = useApplicationState((state) => state.viewers);
+  const focusRegion = useApplicationState((state) => state.ui.focus.region);
+
   const removeViewer = useApplicationState((state) => state.removeViewer);
+  const setFocusData = useApplicationState((state) => state.setFocusData);
+  const updateViewer = useApplicationState((state) => state.updateViewer);
 
   const handleCloseClick = () => {
     removeViewer(viewerIdx);
   };
+
+  const handleRendererClick = () => {
+    setFocusData({ region: "editor" });
+  };
+
+  useEffect(() => {
+    if (focusRegion !== "editor") return;
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp")
+        updateAllViewers((x) => x + 1, updateViewer, viewers);
+
+      if (e.key === "ArrowDown")
+        updateAllViewers((x) => x - 1, updateViewer, viewers);
+    };
+
+    window.addEventListener("keydown", handleKeydown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [focusRegion, viewer]);
 
   return (
     <div
@@ -44,7 +95,11 @@ export default function ArrayEditor({
         >
           {/* this is where the rendering component should go, with a ref to its parent container so it can set its size properly. */}
 
-          <ArrayRenderer viewer={viewer} parentElement={parentRef} />
+          <ArrayRenderer
+            onClick={handleRendererClick}
+            viewer={viewer}
+            parentElement={parentRef}
+          />
 
           <ArraySelector
             viewer={viewer}

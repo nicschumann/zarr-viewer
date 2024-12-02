@@ -1,4 +1,10 @@
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, {
+  HTMLProps,
+  MutableRefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { mat3 } from "gl-matrix";
 import create_regl, { Regl, Vec4 } from "regl";
@@ -9,11 +15,12 @@ import { get, slice } from "@zarrita/indexing";
 import { CompiledShaders, compileShaders } from "@/renderer/compile";
 import { TextureCache } from "@/renderer/texture-cache";
 import { IndexType, useApplicationState, ZarrView } from "@/state";
+import { cn } from "@/lib/utils";
 
 type IArrayRendererProps = {
   viewer: ZarrView;
   parentElement: MutableRefObject<HTMLDivElement>;
-};
+} & HTMLProps<HTMLDivElement>;
 
 type DataCache = {
   key: string;
@@ -62,8 +69,6 @@ const getRenderShape = (viewer: ZarrView): [number, number] | false => {
   const shape = [x, y]
     .filter((v) => v && typeof v === "object")
     .map((v) => v[1] - v[0]);
-
-  console.log(shape);
 
   if (shape.length == 0) {
     // we don't want empty selections
@@ -123,6 +128,8 @@ const getMatrix = (aspect: number, zoom: number, viewport: number[]) => {
 export default function ArrayRenderer({
   parentElement,
   viewer,
+  className,
+  onClick,
 }: IArrayRendererProps) {
   const stores = useApplicationState((state) => state.stores);
 
@@ -207,7 +214,9 @@ export default function ArrayRenderer({
   }, [parentElement.current]);
 
   /**
-   * This useEffect is the drawing loop. It makes sure that the current
+   * This useEffect is the drawing loop. It makes sure that the current selection
+   * matches the data pulled down from the zarr store, and it sets up and tears down
+   * the rendering loop as needed.
    */
   useEffect(() => {
     if (regl === null || shaders === null || parentElement.current === null)
@@ -289,7 +298,10 @@ export default function ArrayRenderer({
   }, [regl, shaders, currentChunk, viewer, tree, parentElement.current]);
 
   return (
-    <div className="relative top-0 left-0 rounded bg-black">
+    <div
+      onClick={onClick}
+      className={cn("relative top-0 left-0 rounded bg-black", className)}
+    >
       <canvas ref={baseCanvas} className="rounded" />
     </div>
   );
