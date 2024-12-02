@@ -16,6 +16,7 @@ import React, {
   MutableRefObject,
   FocusEvent,
   ChangeEvent,
+  ClipboardEvent,
 } from "react";
 
 type IArraySelectorProps = {
@@ -165,6 +166,7 @@ export default function ArraySelector({
   const containerRef = useRef<HTMLDivElement>(null);
   const stores = useApplicationState((state) => state.stores);
   const focus = useApplicationState((state) => state.ui.focus);
+  const numViewers = useApplicationState((state) => state.viewers.length);
 
   const setFocusData = useApplicationState((state) => state.setFocusData);
   const updateViewer = useApplicationState((state) => state.updateViewer);
@@ -271,15 +273,19 @@ export default function ArraySelector({
 
   useEffect(() => {
     if (!containerRef.current) return;
+    if (focus.region === "selector") return;
+
     const inputs = getInputElements(containerRef);
 
     for (let i = 0; i < inputs.length; i += 1) {
       inputs[i].value = stringifySelection(viewer.selection[i]);
     }
-  }, [viewer]);
+  }, [viewer, focus.region]);
 
   const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    console.log(`trigger change for ${i}`);
     const val = e.target.value;
+    console.log(`input ${i} val: ${val}`);
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
     } else {
@@ -338,6 +344,32 @@ export default function ArraySelector({
     setFocusData({ region: "editor" });
     setViewerShouldDraw(viewerIdx, true);
   };
+
+  const handlePaste =
+    (inputIdx: number) => (e: ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const inputs = getInputElements(containerRef);
+      const data = e.clipboardData.getData("text/plain");
+      const split = data.split(",").map((s) => s.trim());
+
+      // set values
+      split.forEach((v, inputOffset) => {
+        const idx = (inputIdx + inputOffset) % inputs.length;
+        inputs[idx].value = v;
+        setTimeout(() => {
+          const inputEvent = new InputEvent("input", { bubbles: true });
+          inputs[idx].dispatchEvent(inputEvent);
+        }, 10);
+      });
+
+      // trigger change events
+      // inputs.forEach((input, i) => {
+      //   console.log(`(paste handler) input ${i} values:`, input.value);
+
+      //   // const changeEvent = new Event("change", { bubbles: true });
+      //   // input.dispatchEvent(changeEvent);
+      // });
+    };
 
   return (
     <div
@@ -400,7 +432,8 @@ export default function ArraySelector({
                   i,
                   focus.region
                 )}
-                onChange={handleDimChange(i)}
+                onPaste={handlePaste(i)}
+                onInput={handleDimChange(i)}
                 defaultValue={0}
                 min={0}
                 max={dim}

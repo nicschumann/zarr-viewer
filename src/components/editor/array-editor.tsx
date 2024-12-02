@@ -67,8 +67,6 @@ export default function ArrayEditor({
     const handleKeydown = (e: KeyboardEvent) => {
       let op: ((x: number) => number) | false = false;
 
-      console.log(e.key, e.shiftKey);
-
       if (e.key === "ArrowUp" && e.shiftKey) op = (x) => x + 5;
       if (e.key === "ArrowUp" && !e.shiftKey) op = (x) => x + 1;
       if (e.key === "ArrowDown" && e.shiftKey) op = (x) => x - 5;
