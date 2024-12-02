@@ -262,8 +262,55 @@ export default function ArraySelector({
     };
   }, [focus.region, dims]);
 
-  const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+  const handleLabelChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+
+    // find coordinate indexer
+    const prefix = viewer.path.split('/').slice(0, -1).join('/')
+    const coordKey = [prefix, names[i]].join('/');
+    const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
+
+    const slice = val.split(" : ");
+
+    const indices = slice.map(s => {
+      try {
+        const checkValue = labelIdx.fromString(s);
+        const idx = labelIdx.indexOf(checkValue);
+        return idx;
+      } catch (err) {
+        console.log("Invalid value or value not found in index")
+      }
+    })
+
+    let updateInputValue;
+
+    if (slice.length == 1) {
+      if ((indices.length == 1) && indices[0] >= 0) {
+        updateInputValue = `${indices[0]}`;
+      } else {
+        // pass
+      }
+    } else {
+      if ((indices[0] >= 0 && indices[1] >= 0)) {
+        if ((indices[1] > indices[0])) {
+          updateInputValue = indices.join(" : ")
+        }
+      } else if (indices[0] >= 0) {
+        updateInputValue = `${indices[0]} : ${slice[1]}`
+      } else if (indices[1] >= 0) {
+        updateInputValue = `${slice[0]} : ${indices[1]}`
+      }
+    }
+
+    if (updateInputValue) {
+      const indexTarget = e.target.parentElement.parentElement.parentElement.querySelector('.index');
+      indexTarget.value = updateInputValue;
+      setNewValues(updateInputValue, i, e.target)
+    }
+
+  };
+
+  const setNewValues = (val, i, labelTarget) => {
 
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
@@ -323,12 +370,18 @@ export default function ArraySelector({
       const prefix = viewer.path.split('/').slice(0, -1).join('/')
       const coordKey = [prefix, names[i]].join('/');
       const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
-      const labelTarget = e.target.parentElement.parentElement.querySelector('.label');
       const targetLabelValues = sel.map(v => labelIdx.valHuman(v));
       // TODO(Oli): use react ;)
-      labelTarget.innerHTML = targetLabelValues.join(' - ');
+      labelTarget.value = targetLabelValues.join(' : ');
       updateViewer(viewerIdx, newViewerSpec);
     }
+
+  }
+
+
+  const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNewValues(val, i, e.target.parentElement.parentElement.querySelector('.label'));
   };
 
   const handleShouldDraw = () => {
@@ -388,7 +441,7 @@ export default function ArraySelector({
             <div className="text-xs text-center w-fit">
               <input
                 className={cn(
-                  "flex h-7 w-[15ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  "index flex h-7 w-[25ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
                 onFocus={handleFocus(
                   setFocusData,
@@ -406,7 +459,12 @@ export default function ArraySelector({
             {/* metadata below */}
             <div className="text-xs p-1 border-t border-gray-20">
               <div className="flex w-fit m-auto">
-                <span className="text-gray-400 label"></span>
+                <input
+                  className={cn(
+                    "flex h-7 w-[25ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm label"
+                )}
+                onKeyUp={handleLabelChange(i)}
+                />
               </div>
             </div>
           </div>
