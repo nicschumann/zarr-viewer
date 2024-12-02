@@ -21,9 +21,16 @@ function isArray(pred: Predicate): pred is Array<any> {
 function isNumber(pred: Predicate): pred is number {
   return Number.isFinite(pred);
 }
+
+function parseNumber(input) {
+  const num = parseFloat(input);
+  return Number.isInteger(num) ? parseInt(input, 10) : num;
+}
+
 export class ArrayIndexer {
   readonly array: Array<number> | Array<string>;
   protected readonly visibleIndexes: Array<number>;
+  type: "number" | "date" | "string" | "float"
 
   constructor(
     array: UnicodeStringArray | Array<any>,
@@ -32,11 +39,17 @@ export class ArrayIndexer {
     if (array instanceof UnicodeStringArray) {
       // TODO: we can do better than just replicating the array
       // Also, sel slices against this is not valid
+      this.type = "string"
       this.array = []
       for (var i=0;i<array.length;i++) {
         this.array.push(array.get(i));
       }
+    } else if (array instanceof Float32Array || array instanceof Float64Array) {
+      this.type = "float";
+      // this.array = array.map(a => a.toFixed(2));
+      this.array = array;
     } else {
+      this.type = "number";
       this.array = array;
     }
     this.visibleIndexes = visibleIndexes || Array.from(array).map((_, i) => i);
@@ -49,7 +62,17 @@ export class ArrayIndexer {
 
   protected translateA2H(value: number): number {
     return value;
-   }
+  }
+
+  public indexOf(value: any, epsilon = 1e-10): number {
+    const translatedPred = this.translateH2A(value);
+    const idx = this.array.findIndex(num => Math.abs(num - value) < epsilon);
+    if (idx >= 0 && this.visibleIndexes.indexOf(idx) >= 0) {
+      return idx;
+    } else {
+      return -1;
+    }
+  }
 
   public sel(pred: Predicate): ArrayIndexer {
     let visibleIndexes;
@@ -127,11 +150,18 @@ export class ArrayIndexer {
     const visibleIdx = this.visibleIndexes[idx];
     let v = this.array[visibleIdx]
     if (Number.isFinite(v) && !Number.isInteger(v)) {
-      v = parseFloat(v.toFixed(2))
+      v = parseFloat(v.toFixed(5))
     }
     return this.translateA2H(v);
   }
 
+  public fromString(value: string): string | number {
+    if (this.type == "string") {
+      return value;
+    } else {
+        return parseNumber(value);
+      }
+  }
 }
 
 function isTypedNumberArray(arr: any): boolean {
@@ -152,6 +182,7 @@ export class DateArrayIndexer extends ArrayIndexer {
   ) {
     super(array, visibleIndexes)
     this.dateUnits = units;
+    this.type = "date";
   }
 
   protected newCopyOf(array: any, visibleIndexes: any): DateArrayIndexer {
@@ -173,6 +204,10 @@ export class DateArrayIndexer extends ArrayIndexer {
     let v = this.array[visibleIdx]
     const d = this.translateA2H(v);
     return d.toISOString();
+  }
+
+  public fromString(value: string): Date {
+    return new Date(value);
   }
 
 }
