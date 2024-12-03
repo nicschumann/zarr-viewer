@@ -90,6 +90,37 @@ test('indexer get zarr array slices', async () => {
   expect(first.sel(300).zindex).toEqual(null);
 })
 
+test('indexOf', async () => {
+  const array = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+  const idxr = new ArrayIndexer(array);
+  const first = idxr.isel({start: 0, stop: 3})
+  expect(first.indexOf(20)).toEqual(1);
+  expect(first.indexOf(50)).toEqual(-1);
+})
+
+test('floats', async () => {
+  const array = [
+    -89.995, -89.985, -89.975,
+    -89.96499999999999, -89.95499999999998, -89.94499999999998];
+  const fa = new Float64Array(array);
+  const idxr = new ArrayIndexer(fa);
+  expect(idxr.indexOf(-89.975)).toEqual(2);
+  expect(idxr.indexOf(-89.965)).toEqual(3);
+})
+
+test('fromString', async () => {
+  const array = [
+    -89.995, -89.985, -89.975,
+    -89.96499999999999, -89.95499999999998, -89.94499999999998];
+  const fa = new Float64Array(array);
+  const idxr = new ArrayIndexer(fa);
+  expect(idxr.fromString("89.975")).toEqual(89.975)
+  expect(idxr.fromString("89")).toEqual(89)
+})
+
+
+
+
 test('str indexer', async () => {
   const array = [10, 20, 30, 40, 50, 60, 70, 80, 90].map(String);
   const idxr = new ArrayIndexer(array);
