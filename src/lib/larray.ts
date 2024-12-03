@@ -1,11 +1,12 @@
 import * as zarr from "zarrita";
 import { num2date, date2num } from "./cf-time";
+import { UnicodeStringArray } from "@zarrita/typedarray"
 export interface Slice {
   start: number | Date;
   stop: number | Date;
   step?: number | Date | null;
 }
-type Predicate = Slice | number | Array<number>;
+type Predicate = Slice | number | Array<number> | string;
 type Predicates = Record<string, Predicate>;
 export type CoordsMap = Record<string, ArrayIndexer>;
 
@@ -21,14 +22,23 @@ function isNumber(pred: Predicate): pred is number {
   return Number.isFinite(pred);
 }
 export class ArrayIndexer {
-  readonly array: Array<number>;
-  private readonly visibleIndexes: Array<number>;
+  readonly array: Array<number> | Array<string>;
+  protected readonly visibleIndexes: Array<number>;
 
   constructor(
-    array: Array<any>,
+    array: UnicodeStringArray | Array<any>,
     visibleIndexes: Array<number> | null = null
   ) {
-    this.array = array;
+    if (array instanceof UnicodeStringArray) {
+      // TODO: we can do better than just replicating the array
+      // Also, sel slices against this is not valid
+      this.array = []
+      for (var i=0;i<array.length;i++) {
+        this.array.push(array.get(i));
+      }
+    } else {
+      this.array = array;
+    }
     this.visibleIndexes = visibleIndexes || Array.from(array).map((_, i) => i);
   }
 
@@ -113,6 +123,14 @@ export class ArrayIndexer {
     return this.visibleIndexes.map((v) => this.translateA2H(this.array[v]));
   }
 
+  public valHuman(idx: number) {
+    const visibleIdx = this.visibleIndexes[idx];
+    let v = this.array[visibleIdx]
+    if (Number.isFinite(v) && !Number.isInteger(v)) {
+      v = parseFloat(v.toFixed(2))
+    }
+    return this.translateA2H(v);
+  }
 
 }
 
@@ -149,7 +167,42 @@ export class DateArrayIndexer extends ArrayIndexer {
   protected translateA2H(value: number): number | Date {
     return num2date(new BigInt64Array([BigInt(value)]), this.dateUnits)[0];
   }
+
+  public valHuman(idx: number) {
+    const visibleIdx = this.visibleIndexes[idx];
+    let v = this.array[visibleIdx]
+    const d = this.translateA2H(v);
+    return d.toISOString();
+  }
+
 }
+
+export class StringArrayIndexer extends ArrayIndexer {
+
+  constructor(
+    array: Array<any>,
+    visibleIndexes: Array<number> | null = null
+  ) {
+    super(array, visibleIndexes)
+  }
+
+  public valHuman(idx: number) {
+    let v = this.array[idx]
+    const d = this.translateA2H(v);
+  }
+
+}
+
+export const getIdxForSingleArr = async (d, coordArray) => {
+  const arr = await zarr.get(coordArray);
+  const data = arr.data;
+  if (d == 'time') {
+    return new DateArrayIndexer(data, null, coordArray.attrs.units);
+  } else {
+    return new ArrayIndexer(data);
+  }
+}
+
 
 export const coordsFromZarr = async (
   node: zarr.Array<zarr.DataType,any>
@@ -165,7 +218,6 @@ export const coordsFromZarr = async (
       });
       const arr = await zarr.get(coordArray);
       const data = arr.data;
-
       if (d == 'time') {
         return [d, new DateArrayIndexer(data, null, coordArray.attrs.units)]
       } else {

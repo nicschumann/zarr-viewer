@@ -18,6 +18,7 @@ import React, {
   ChangeEvent,
   ClipboardEvent,
 } from "react";
+import { ArrayIndexer, coordsFromZarr } from "@/lib/larray";
 
 type IArraySelectorProps = {
   viewer: ZarrView;
@@ -240,6 +241,7 @@ export default function ArraySelector({
     errorDims: [],
   });
 
+
   /**
    * NOTE(Nic): This useEffect sets up keyboard handling iff the user is focused on
    * the current selector panel, otherwise it returns. We only run this if we've
@@ -285,7 +287,6 @@ export default function ArraySelector({
   const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
     console.log(`trigger change for ${i}`);
     const val = e.target.value;
-    console.log(`input ${i} val: ${val}`);
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
     } else {
@@ -304,7 +305,10 @@ export default function ArraySelector({
        */
       /**
        * TODO(Nic): add heuristics about whether the view should draw here...
+       * TODO(Oli): Retrieve the indices from the Indexer rather than manually computing here
        */
+      // persist the selected indices for subsequent mapping to labels
+      let sel = []
       if (val.indexOf(":") !== -1) {
         const slice = val.split(":");
         if (slice.length !== 2) {
@@ -317,22 +321,34 @@ export default function ArraySelector({
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [parseInt(slice[0]), dims[i]] : v
           );
+          sel.push(parseInt(slice[0]), dims[i])
         } else if (slice[0] === "" && slice[1].length > 0) {
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [0, parseInt(slice[1])] : v
           );
+          sel.push(0, parseInt(slice[1]))
         } else {
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [parseInt(slice[0]), parseInt(slice[1])] : v
           );
+          sel.push(parseInt(slice[0]), parseInt(slice[1]))
         }
         newViewerSpec.drawing = false;
       } else {
         newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
           j === i ? parseInt(val) : v
         );
+
+        sel.push(parseInt(val))
       }
 
+      const prefix = viewer.path.split('/').slice(0, -1).join('/')
+      const coordKey = [prefix, names[i]].join('/');
+      const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
+      const labelTarget = e.target.parentElement.parentElement.querySelector('.label');
+      const targetLabelValues = sel.map(v => labelIdx.valHuman(v));
+      // TODO(Oli): use react ;)
+      labelTarget.innerHTML = targetLabelValues.join(' - ');
       updateViewer(viewerIdx, newViewerSpec);
     }
   };
@@ -423,7 +439,7 @@ export default function ArraySelector({
             <div className="text-xs text-center w-fit">
               <input
                 className={cn(
-                  "flex h-7 w-[10ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  "flex h-7 w-[15ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
                 onFocus={handleFocus(
                   setFocusData,
@@ -442,7 +458,7 @@ export default function ArraySelector({
             {/* metadata below */}
             <div className="text-xs p-1 border-t border-gray-20">
               <div className="flex w-fit m-auto">
-                <span className="text-gray-400">units</span>
+                <span className="text-gray-400 label"></span>
               </div>
             </div>
           </div>

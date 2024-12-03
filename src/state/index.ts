@@ -2,6 +2,7 @@ import * as zarr from "zarrita";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { readStore } from "./read-metadata";
+import { ArrayIndexer, CoordsMap } from "@/lib/larray";
 
 export type ZarrObject = zarr.Array<zarr.DataType, any> | zarr.Group<any>;
 
@@ -29,6 +30,7 @@ export type HTTPZarrStore = {
   loaded: boolean;
   keys: { [key: string]: ZarrTree };
   tree: ZarrTree;
+  coordinateIndexKeys: CoordsMap;
 };
 
 export type ZarrStore = HTTPZarrStore;
