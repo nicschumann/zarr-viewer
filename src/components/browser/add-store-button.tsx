@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState } from "@/state";
 import { readStore, resultIsError } from "@/state/read-metadata";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import React, { HTMLProps, useEffect, useRef, useState } from "react";
 
 type ComponentUIState = {
@@ -16,13 +16,25 @@ export default function AddStoreButton({
   ///
   const inputRef = useRef<HTMLInputElement>(null);
   const focus = useApplicationState((state) => state.ui.focus);
+  const browserUIState = useApplicationState((state) => state.ui.browser);
+
   const setFocusData = useApplicationState((state) => state.setFocusData);
+  const setBrowserUIData = useApplicationState(
+    (state) => state.setBrowserUIState
+  );
   const addStore = useApplicationState((state) => state.addStore);
 
   const handleClick = () => {
     if (!inputRef.current) return;
 
-    if (!expanded) {
+    if (browserUIState.state !== "expanded") {
+      setBrowserUIData({ ...browserUIState, state: "expanded" });
+      setExpanded(true);
+      setTimeout(() => {
+        // need a little delay on this for the UI to transition...
+        inputRef.current.focus();
+      }, 10);
+    } else if (!expanded) {
       setExpanded(true);
       inputRef.current.focus();
     } else {
@@ -96,7 +108,8 @@ export default function AddStoreButton({
             // TODO(Nic): factor this out as part of the layout subsystem.
             style={{ width: `calc(350px - 24px - 3em)` }}
             className={cn(
-              "flex h-7 w-full m-1 italic rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200  focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+              "h-7 w-full m-1 italic rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200  focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+              browserUIState.state === "expanded" ? "flex" : "hidden"
             )}
             onFocus={handleFocus}
             placeholder="Link A New Zarr Store..."
@@ -104,15 +117,15 @@ export default function AddStoreButton({
           />
           {uiState.state === "error" && (
             <div
-              className="bg-red-600 font-bold rounded-sm px-1 py-[3px] absolute top-0 right-0 text-red-100 z-10"
+              className="bg-red-600 flex items-center font-bold rounded-sm px-2 py-1 absolute top-0 right-0 text-red-100 z-10"
               style={{ transform: `translate(50%, -75%)` }}
             >
               Error!
               <span
                 onClick={() => setUIState({ state: "normal" })}
-                className="ml-3 font-normal"
+                className="ml-5 font-normal hover:bg-white rounded-full p-0.5 hover:text-red-600"
               >
-                [x]
+                <X size={16} />
               </span>
             </div>
           )}
