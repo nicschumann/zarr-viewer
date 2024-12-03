@@ -54,6 +54,10 @@ export type ZarrView = {
 
 export type ApplicationUIZone = "browser" | "selector" | "editor";
 
+export type BrowserState = {
+  state: "expanded" | "collapsed";
+};
+
 export type FocusState =
   | {
       region: "browser";
@@ -79,21 +83,27 @@ export type FocusState =
 
 interface ApplicationState {
   ui: {
+    browser: BrowserState;
     focus: FocusState;
   };
   stores: { [name: string]: ZarrStore };
   viewers: ZarrView[];
   addStore: (zarrStore: ZarrStore) => void;
   addViewer: (viewerSpec: ZarrView) => void;
+  removeViewer: (viewerIdx: number) => void;
   updateViewer: (index: number, viewerSpec: ZarrView) => void;
   setViewerShouldDraw: (index: number, shouldDraw: boolean) => void;
   setFocusData: (focusState: FocusState) => void;
+  setBrowserUIState: (browserState: BrowserState) => void;
 }
 
 export const useApplicationState = create<ApplicationState>()(
   immer((set) => ({
     // state:
     ui: {
+      browser: {
+        state: "collapsed",
+      },
       focus: {
         region: "browser",
         target: "add",
@@ -107,6 +117,11 @@ export const useApplicationState = create<ApplicationState>()(
     addViewer(viewerSpec) {
       set((state) => {
         state.viewers.push(viewerSpec);
+      });
+    },
+    removeViewer(viewerIdx) {
+      set((state) => {
+        state.viewers = state.viewers.filter((v, idx) => idx !== viewerIdx);
       });
     },
     updateViewer(index, viewerSpec) {
@@ -131,6 +146,11 @@ export const useApplicationState = create<ApplicationState>()(
     setFocusData(focusState) {
       set((state) => {
         state.ui.focus = focusState;
+      });
+    },
+    setBrowserUIState(browserState) {
+      set((state) => {
+        state.ui.browser = browserState;
       });
     },
   }))

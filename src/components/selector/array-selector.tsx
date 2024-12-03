@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   ApplicationUIZone,
   FocusState,
+  IndexType,
   useApplicationState,
   ZarrView,
 } from "@/state";
@@ -15,6 +16,7 @@ import React, {
   MutableRefObject,
   FocusEvent,
   ChangeEvent,
+  ClipboardEvent,
 } from "react";
 import { ArrayIndexer, coordsFromZarr } from "@/lib/larray";
 
@@ -148,6 +150,14 @@ function isIntegerOrSlice(input) {
   return /^(\d+)(?::(\d+)?)?$/.test(input);
 }
 
+function stringifySelection(index: IndexType) {
+  if (typeof index === "number") return index.toFixed(0);
+  else if (index === null) return ":";
+  else if (typeof index === "object") return index.join(":");
+
+  return "";
+}
+
 export default function ArraySelector({
   viewer,
   viewerIdx,
@@ -157,6 +167,7 @@ export default function ArraySelector({
   const containerRef = useRef<HTMLDivElement>(null);
   const stores = useApplicationState((state) => state.stores);
   const focus = useApplicationState((state) => state.ui.focus);
+  const numViewers = useApplicationState((state) => state.viewers.length);
 
   const setFocusData = useApplicationState((state) => state.setFocusData);
   const updateViewer = useApplicationState((state) => state.updateViewer);
@@ -262,9 +273,20 @@ export default function ArraySelector({
     };
   }, [focus.region, dims]);
 
-  const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  useEffect(() => {
+    if (!containerRef.current) return;
+    if (focus.region === "selector") return;
 
+    const inputs = getInputElements(containerRef);
+
+    for (let i = 0; i < inputs.length; i += 1) {
+      inputs[i].value = stringifySelection(viewer.selection[i]);
+    }
+  }, [viewer, focus.region]);
+
+  const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    console.log(`trigger change for ${i}`);
+    const val = e.target.value;
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
     } else {
@@ -333,8 +355,37 @@ export default function ArraySelector({
 
   const handleShouldDraw = () => {
     // TODO(Nic): validate
+
+    // When you click should draw, we shift focus to the editor...
+    setFocusData({ region: "editor" });
     setViewerShouldDraw(viewerIdx, true);
   };
+
+  const handlePaste =
+    (inputIdx: number) => (e: ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const inputs = getInputElements(containerRef);
+      const data = e.clipboardData.getData("text/plain");
+      const split = data.split(",").map((s) => s.trim());
+
+      // set values
+      split.forEach((v, inputOffset) => {
+        const idx = (inputIdx + inputOffset) % inputs.length;
+        inputs[idx].value = v;
+        setTimeout(() => {
+          const inputEvent = new InputEvent("input", { bubbles: true });
+          inputs[idx].dispatchEvent(inputEvent);
+        }, 10);
+      });
+
+      // trigger change events
+      // inputs.forEach((input, i) => {
+      //   console.log(`(paste handler) input ${i} values:`, input.value);
+
+      //   // const changeEvent = new Event("change", { bubbles: true });
+      //   // input.dispatchEvent(changeEvent);
+      // });
+    };
 
   return (
     <div
@@ -397,7 +448,8 @@ export default function ArraySelector({
                   i,
                   focus.region
                 )}
-                onChange={handleDimChange(i)}
+                onPaste={handlePaste(i)}
+                onInput={handleDimChange(i)}
                 defaultValue={0}
                 min={0}
                 max={dim}
@@ -412,17 +464,19 @@ export default function ArraySelector({
           </div>
         );
       })}
-      <div
-        onMouseDown={handleShouldDraw}
-        className={cn(
-          "flex items-center mr-2 last:mr-0",
-          "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
-        )}
-      >
-        <CommandIcon size={18} />
-        <Plus size={18} />
-        <CornerDownLeft size={18} />
-      </div>
+      {!viewer.drawing && (
+        <div
+          onMouseDown={handleShouldDraw}
+          className={cn(
+            "flex items-center mr-2 last:mr-0",
+            "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
+          )}
+        >
+          <CommandIcon size={18} />
+          <Plus size={18} />
+          <CornerDownLeft size={18} />
+        </div>
+      )}
     </div>
   );
 }
