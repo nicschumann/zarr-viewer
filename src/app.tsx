@@ -3,16 +3,20 @@ import ArrayEditor from "./components/editor/array-editor";
 import AddStoreButton from "./components/browser/add-store-button";
 import StoreDisplay from "./components/browser/store-display";
 import { useApplicationState } from "./state";
+import ToggleSidebarButton from "./components/browser/toggle-sidebar-button";
 
 export default function App() {
-  const margin = `1em`;
-  const sidebarOpen = "350px";
-  const sidebarWidth = `${sidebarOpen} + 2 * ${margin}`;
-
   const focusState = useApplicationState((state) => state.ui.focus);
   const stores = useApplicationState((state) => state.stores);
   const viewers = useApplicationState((state) => state.viewers);
-  // const setFocusZone = useApplicationState((state) => state.setFocusZone);
+  const browserState = useApplicationState((state) => state.ui.browser.state);
+
+  const margin = `1em`;
+  const sidebarOpen = "350px";
+  const sidebarClosed = "55px";
+  const sidebarWidth = `${
+    browserState === "expanded" ? sidebarOpen : sidebarClosed
+  } + 2 * ${margin}`;
 
   return (
     <>
@@ -22,7 +26,7 @@ export default function App() {
           <section>
             <div
               style={{ width: `calc(${sidebarWidth})` }}
-              className="h-screen border"
+              className="relative h-screen border"
             >
               <div
                 className="bg-white h-full border-2 p-2 items-center border-gray-300 rounded-xl"
@@ -37,22 +41,33 @@ export default function App() {
                 {Object.entries(stores).map(([uri, store], i) => {
                   return <StoreDisplay key={`store-${i}`} store={store} />;
                 })}
+
+                <ToggleSidebarButton
+                  className="absolute bottom-0"
+                  style={{ transform: "translateY(-50%)" }}
+                />
               </div>
             </div>
           </section>
           {/* editors */}
-          <section className="flex">
-            {viewers.length === 0 && <div>no viewers</div>}
-            {viewers.map((viewer, i) => {
-              return (
-                <ArrayEditor
-                  viewer={viewer}
-                  viewerIdx={i}
-                  key={`viewer-${i}`}
-                  sidebarWidth={sidebarWidth}
-                />
-              );
-            })}
+          <section>
+            <div
+              className="flex"
+              style={{ width: `calc(100vw - (${sidebarWidth}))` }}
+            >
+              {viewers.length === 0 && <div>no viewers</div>}
+              {viewers.map((viewer, i) => {
+                return (
+                  <ArrayEditor
+                    viewer={viewer}
+                    viewerIdx={i}
+                    numViewers={viewers.length}
+                    key={`viewer-${i}`}
+                    sidebarWidth={sidebarWidth}
+                  />
+                );
+              })}
+            </div>
             <div className="absolute flex top-2 right-2 ">
               <span className="bg-blue-300 p-1 px-3 rounded text-xs">
                 focus: {focusState.region}

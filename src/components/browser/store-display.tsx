@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useApplicationState, ZarrStore, ZarrTree, ZarrView } from "@/state";
-import { Box, Boxes, ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState, useSyncExternalStore } from "react";
+import { Box, ChevronDown, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
 
 interface IStoreDisplayProps {
   store: ZarrStore;
@@ -21,14 +21,18 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
   addViewer,
 }) => {
   const numViewers = useApplicationState((state) => state.viewers.length);
+  const treeExpanded = useApplicationState(
+    (state) => state.ui.browser.state === "expanded"
+  );
   const setFocusData = useApplicationState((state) => state.setFocusData);
   const [expanded, setExpanded] = useState(false);
   const type = node.type;
+  const canAddViewer = numViewers < 2;
 
   const toggleExpand = () => {
     if (node.type === "group") {
       setExpanded(!expanded);
-    } else {
+    } else if (canAddViewer) {
       const numDims = node.ref.shape.length;
       const viewSpec: ZarrView = {
         state: "uninitialized",
@@ -53,7 +57,11 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
   return (
     <>
       <div
-        className={cn("flex items-center hover:bg-gray-200", `ml-${2 * level}`)}
+        className={cn(
+          "flex items-center",
+          `ml-${2 * level}`,
+          canAddViewer || type === "group" ? "hover:bg-gray-200" : ""
+        )}
         key={`subtree-${node.path}`}
         onClick={toggleExpand}
       >
@@ -61,7 +69,9 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
           className={cn(
             "flex items-center text-center m-2 w-[30px] h-[30px] rounded-[100%] ",
             type === "array"
-              ? "bg-blue-300 text-blue-700"
+              ? canAddViewer
+                ? "bg-blue-300 text-blue-700"
+                : "bg-gray-300 text-gray-500"
               : "bg-green-300 text-green-700 cursor-pointer "
           )}
         >
@@ -79,19 +89,22 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
             )}
           </div>
         </div>
-        <div className="text-sm flex py-2 px-3">
-          <h2 className="font-bold">{node.name}</h2>
-          {node.type === "array" && (
-            <>
-              <div className="text-gray-500 ml-2">{node.ref.dtype}</div>
-              <div className="text-gray-500 ml-2">
-                [{node.ref.shape.join(", ")}]
-              </div>
-            </>
-          )}
-        </div>
+        {treeExpanded && (
+          <div className="text-sm flex py-2 px-3">
+            <h2 className="font-bold">{node.name}</h2>
+            {node.type === "array" && (
+              <>
+                <div className="text-gray-500 ml-2">{node.ref.dtype}</div>
+                <div className="text-gray-500 ml-2">
+                  [{node.ref.shape.join(", ")}]
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
-      {expanded &&
+      {treeExpanded &&
+        expanded &&
         Object.entries(node.children).map(([key, subtree], i) => {
           return (
             <TreeNode

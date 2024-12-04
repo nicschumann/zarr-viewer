@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   ApplicationUIZone,
   FocusState,
+  IndexType,
   useApplicationState,
   ZarrView,
 } from "@/state";
@@ -15,6 +16,7 @@ import React, {
   MutableRefObject,
   FocusEvent,
   ChangeEvent,
+  ClipboardEvent,
 } from "react";
 import { ArrayIndexer, coordsFromZarr } from "@/lib/larray";
 
@@ -24,10 +26,16 @@ type IArraySelectorProps = {
   active: boolean;
 } & React.ComponentProps<"div">;
 
-const getInputElements = (
+const getIndexInputElements = (
   parent: MutableRefObject<HTMLDivElement>
 ): NodeListOf<HTMLInputElement> => {
-  return parent.current.querySelectorAll("input");
+  return parent.current.querySelectorAll("input.index");
+};
+
+const getLabelInputElements = (
+  parent: MutableRefObject<HTMLDivElement>
+): NodeListOf<HTMLInputElement> => {
+  return parent.current.querySelectorAll("input.label");
 };
 
 const handleKeydown =
@@ -47,7 +55,7 @@ const handleKeydown =
       return;
 
     setLocalUI((prev) => {
-      const inputs = getInputElements(parent);
+      const inputs = getIndexInputElements(parent);
 
       if (inputs.length !== numDims) return prev;
       if (inputs.length <= prev.activeDim) return prev;
@@ -148,6 +156,14 @@ function isIntegerOrSlice(input) {
   return /^(\d+)(?::(\d+)?)?$/.test(input);
 }
 
+function stringifySelection(index: IndexType) {
+  if (typeof index === "number") return index.toFixed(0);
+  else if (index === null) return ":";
+  else if (typeof index === "object") return index.join(":");
+
+  return "";
+}
+
 export default function ArraySelector({
   viewer,
   viewerIdx,
@@ -157,6 +173,7 @@ export default function ArraySelector({
   const containerRef = useRef<HTMLDivElement>(null);
   const stores = useApplicationState((state) => state.stores);
   const focus = useApplicationState((state) => state.ui.focus);
+  const numViewers = useApplicationState((state) => state.viewers.length);
 
   const setFocusData = useApplicationState((state) => state.setFocusData);
   const updateViewer = useApplicationState((state) => state.updateViewer);
@@ -239,7 +256,7 @@ export default function ArraySelector({
   useEffect(() => {
     if (!containerRef.current) return;
     if (focus.region !== "selector") return;
-    const inputs = getInputElements(containerRef);
+    const inputs = getIndexInputElements(containerRef);
 
     // make sure the DOM state matches the UI proxy.
     for (let i = 0; i < inputs.length; i += 1) {
@@ -261,6 +278,32 @@ export default function ArraySelector({
       window.removeEventListener("keydown", localKeydownHandler);
     };
   }, [focus.region, dims]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    if (focus.region === "selector") return;
+
+    const inputs = getIndexInputElements(containerRef);
+    const labels = getLabelInputElements(containerRef)
+
+    for (let i = 0; i < inputs.length; i += 1) {
+      const sel = viewer.selection[i]
+      inputs[i].value = stringifySelection(sel);
+
+      const prefix = viewer.path.split('/').slice(0, -1).join('/')
+      const coordKey = [prefix, names[i]].join('/');
+      const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
+
+      if (typeof sel === 'number') {
+        labels[i].value = labelIdx.valHuman(sel)
+      } else if (sel === null) {
+        labels[i].value = ':'
+      } else if (typeof sel === 'object') {
+        labels[i].value == sel.map(v => labelIdx.valHuman(v)).join(':')
+      }
+    }
+  }, [viewer, focus.region]);
+
 
   const handleLabelChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -386,8 +429,37 @@ export default function ArraySelector({
 
   const handleShouldDraw = () => {
     // TODO(Nic): validate
+
+    // When you click should draw, we shift focus to the editor...
+    setFocusData({ region: "editor" });
     setViewerShouldDraw(viewerIdx, true);
   };
+
+  const handlePaste =
+    (inputIdx: number) => (e: ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const inputs = getIndexInputElements(containerRef);
+      const data = e.clipboardData.getData("text/plain");
+      const split = data.split(",").map((s) => s.trim());
+
+      // set values
+      split.forEach((v, inputOffset) => {
+        const idx = (inputIdx + inputOffset) % inputs.length;
+        inputs[idx].value = v;
+        setTimeout(() => {
+          const inputEvent = new InputEvent("input", { bubbles: true });
+          inputs[idx].dispatchEvent(inputEvent);
+        }, 10);
+      });
+
+      // trigger change events
+      // inputs.forEach((input, i) => {
+      //   console.log(`(paste handler) input ${i} values:`, input.value);
+
+      //   // const changeEvent = new Event("change", { bubbles: true });
+      //   // input.dispatchEvent(changeEvent);
+      // });
+    };
 
   return (
     <div
@@ -450,7 +522,8 @@ export default function ArraySelector({
                   i,
                   focus.region
                 )}
-                onChange={handleDimChange(i)}
+                onPaste={handlePaste(i)}
+                onInput={handleDimChange(i)}
                 defaultValue={0}
                 min={0}
                 max={dim}
@@ -461,26 +534,28 @@ export default function ArraySelector({
               <div className="flex w-fit m-auto">
                 <input
                   className={cn(
-                    "flex h-7 w-[25ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm label"
+                    "label flex h-7 w-[25ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 )}
-                onKeyUp={handleLabelChange(i)}
+                onInput={handleLabelChange(i)}
                 />
               </div>
             </div>
           </div>
         );
       })}
-      <div
-        onMouseDown={handleShouldDraw}
-        className={cn(
-          "flex items-center mr-2 last:mr-0",
-          "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
-        )}
-      >
-        <CommandIcon size={18} />
-        <Plus size={18} />
-        <CornerDownLeft size={18} />
-      </div>
+      {!viewer.drawing && (
+        <div
+          onMouseDown={handleShouldDraw}
+          className={cn(
+            "flex items-center mr-2 last:mr-0",
+            "border-2 border-input border-gray-400 rounded-md bg-gray-300 p-2"
+          )}
+        >
+          <CommandIcon size={18} />
+          <Plus size={18} />
+          <CornerDownLeft size={18} />
+        </div>
+      )}
     </div>
   );
 }

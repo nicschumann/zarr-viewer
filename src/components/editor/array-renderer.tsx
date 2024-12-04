@@ -1,4 +1,10 @@
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, {
+  HTMLProps,
+  MutableRefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { mat3 } from "gl-matrix";
 import create_regl, { Regl, Vec4 } from "regl";
@@ -9,11 +15,12 @@ import { get, slice } from "@zarrita/indexing";
 import { CompiledShaders, compileShaders } from "@/renderer/compile";
 import { TextureCache } from "@/renderer/texture-cache";
 import { IndexType, useApplicationState, ZarrView } from "@/state";
+import { cn } from "@/lib/utils";
 
 type IArrayRendererProps = {
   viewer: ZarrView;
   parentElement: MutableRefObject<HTMLDivElement>;
-};
+} & HTMLProps<HTMLDivElement>;
 
 type DataCache = {
   key: string;
@@ -24,7 +31,6 @@ type DataCache = {
 /**
  * Rendering helpers
  */
-
 function makeKey(store: zarr.Array<any, any>, slice: IndexType[]): string {
   return `${store.path}-${slice.join("/")}`;
 }
@@ -39,6 +45,12 @@ const getRegion = async (store: zarr.Array<any, any>, index: IndexType[]) => {
 
   let chunk = await get(store, zarrIndex);
 
+  /**
+   * NOTE(Nic): for our testcases, this will always be a float32 array,
+   * but this may break if the dtype is a BoolArray...
+   */
+  // TODO(Nic): remvoe
+  // @ts-ignore
   const bounds = chunk.data.reduce(
     (prev, value) => ({
       min: Math.min(prev.min, value),
@@ -57,8 +69,6 @@ const getRenderShape = (viewer: ZarrView): [number, number] | false => {
   const shape = [x, y]
     .filter((v) => v && typeof v === "object")
     .map((v) => v[1] - v[0]);
-
-  console.log(shape);
 
   if (shape.length == 0) {
     // we don't want empty selections
@@ -107,15 +117,19 @@ const getMatrix = (aspect: number, zoom: number, viewport: number[]) => {
     (-2.0 * size_px[1]) / (viewport[1] * window.devicePixelRatio),
   ];
 
+  // @ts-ignore
   const translation = mat3.fromTranslation([], [-0.5, -0.5]);
+  // @ts-ignore
   const scaling = mat3.fromScaling([], scalefactors);
-
+  // @ts-ignore
   return mat3.multiply([], scaling, translation);
 };
 
 export default function ArrayRenderer({
   parentElement,
   viewer,
+  className,
+  onClick,
 }: IArrayRendererProps) {
   const stores = useApplicationState((state) => state.stores);
 
@@ -174,10 +188,35 @@ export default function ArrayRenderer({
     setRegl((_) => localRegl);
     setShaders((_) => compileShaders(localRegl));
     setTextures(new TextureCache(localRegl));
+
+    const resizeObserver = new ResizeObserver(() => {
+      const rect = parentElement.current.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Set the canvas style size (CSS pixels)
+      baseCanvas.current.style.width = `${rect.width}px`;
+      baseCanvas.current.style.height = `${rect.height}px`;
+
+      // Set the canvas internal size (actual pixels)
+      baseCanvas.current.width = rect.width * dpr;
+      baseCanvas.current.height = rect.height * dpr;
+
+      // Update the WebGL viewport
+      localRegl.poll();
+    });
+
+    resizeObserver.observe(parentElement.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      localRegl.destroy();
+    };
   }, [parentElement.current]);
 
   /**
-   * This useEffect is the drawing loop. It makes sure that the current
+   * This useEffect is the drawing loop. It makes sure that the current selection
+   * matches the data pulled down from the zarr store, and it sets up and tears down
+   * the rendering loop as needed.
    */
   useEffect(() => {
     if (regl === null || shaders === null || parentElement.current === null)
@@ -222,13 +261,13 @@ export default function ArrayRenderer({
           // update canvas if needed
           const { width, height } =
             parentElement.current.getBoundingClientRect();
-          baseCanvas.current.width = width;
-          baseCanvas.current.height = height;
 
           const aspect = renderShape[0] / renderShape[1];
           const zoom = 1;
           const matrix = getMatrix(aspect, zoom, [width, height]);
           const normalization = currentChunk.bounds.max;
+
+          // console.log(width, height);
 
           // NOTE(Nic): this is for drawing 2D selections only...
 
@@ -259,7 +298,10 @@ export default function ArrayRenderer({
   }, [regl, shaders, currentChunk, viewer, tree, parentElement.current]);
 
   return (
-    <div className="relative top-0 left-0">
+    <div
+      onClick={onClick}
+      className={cn("relative top-0 left-0 rounded bg-black", className)}
+    >
       <canvas ref={baseCanvas} className="rounded" />
     </div>
   );
