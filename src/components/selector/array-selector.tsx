@@ -247,7 +247,6 @@ export default function ArraySelector({
     errorDims: [],
   });
 
-
   /**
    * NOTE(Nic): This useEffect sets up keyboard handling iff the user is focused on
    * the current selector panel, otherwise it returns. We only run this if we've
@@ -284,77 +283,78 @@ export default function ArraySelector({
     if (focus.region === "selector") return;
 
     const inputs = getIndexInputElements(containerRef);
-    const labels = getLabelInputElements(containerRef)
+    const labels = getLabelInputElements(containerRef);
 
     for (let i = 0; i < inputs.length; i += 1) {
-      const sel = viewer.selection[i]
+      const sel = viewer.selection[i];
       inputs[i].value = stringifySelection(sel);
 
-      const prefix = viewer.path.split('/').slice(0, -1).join('/')
-      const coordKey = [prefix, names[i]].join('/');
+      const prefix = viewer.path.split("/").slice(0, -1).join("/");
+      const coordKey = [prefix, names[i]].join("/");
       const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
 
-      if (typeof sel === 'number') {
-        labels[i].value = labelIdx.valHuman(sel)
+      if (typeof sel === "number") {
+        labels[i].value = labelIdx.valHuman(sel);
       } else if (sel === null) {
-        labels[i].value = ':'
-      } else if (typeof sel === 'object') {
-        labels[i].value == sel.map(v => labelIdx.valHuman(v)).join(':')
+        labels[i].value = ":";
+      } else if (typeof sel === "object") {
+        labels[i].value == sel.map((v) => labelIdx.valHuman(v)).join(":");
       }
     }
   }, [viewer, focus.region]);
 
+  const handleLabelChange =
+    (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
 
-  const handleLabelChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+      // find coordinate indexer
+      const prefix = viewer.path.split("/").slice(0, -1).join("/");
+      const coordKey = [prefix, names[i]].join("/");
+      const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
 
-    // find coordinate indexer
-    const prefix = viewer.path.split('/').slice(0, -1).join('/')
-    const coordKey = [prefix, names[i]].join('/');
-    const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
+      const slice = val.split(" : ");
 
-    const slice = val.split(" : ");
-
-    const indices = slice.map(s => {
-      try {
-        const checkValue = labelIdx.fromString(s);
-        const idx = labelIdx.indexOf(checkValue);
-        return idx;
-      } catch (err) {
-        console.log("Invalid value or value not found in index")
-      }
-    })
-
-    let updateInputValue;
-
-    if (slice.length == 1) {
-      if ((indices.length == 1) && indices[0] >= 0) {
-        updateInputValue = `${indices[0]}`;
-      } else {
-        // pass
-      }
-    } else {
-      if ((indices[0] >= 0 && indices[1] >= 0)) {
-        if ((indices[1] > indices[0])) {
-          updateInputValue = indices.join(" : ")
+      const indices = slice.map((s) => {
+        try {
+          const checkValue = labelIdx.fromString(s);
+          const idx = labelIdx.indexOf(checkValue);
+          return idx;
+        } catch (err) {
+          console.log("Invalid value or value not found in index");
         }
-      } else if (indices[0] >= 0) {
-        updateInputValue = `${indices[0]} : ${slice[1]}`
-      } else if (indices[1] >= 0) {
-        updateInputValue = `${slice[0]} : ${indices[1]}`
+      });
+
+      let updateInputValue;
+
+      if (slice.length == 1) {
+        if (indices.length == 1 && indices[0] >= 0) {
+          updateInputValue = `${indices[0]}`;
+        } else {
+          // pass
+        }
+      } else {
+        if (indices[0] >= 0 && indices[1] >= 0) {
+          if (indices[1] > indices[0]) {
+            updateInputValue = indices.join(" : ");
+          }
+        } else if (indices[0] >= 0) {
+          updateInputValue = `${indices[0]} : ${slice[1]}`;
+        } else if (indices[1] >= 0) {
+          updateInputValue = `${slice[0]} : ${indices[1]}`;
+        }
       }
-    }
 
-    if (updateInputValue) {
-      const indexTarget = e.target.parentElement.parentElement.parentElement.querySelector('.index');
-      indexTarget.value = updateInputValue;
-      setNewValues(updateInputValue, i, e.target)
-    }
-
-  };
+      if (updateInputValue) {
+        const indexTarget =
+          e.target.parentElement.parentElement.parentElement.querySelector(
+            ".index"
+          );
+        indexTarget.value = updateInputValue;
+        setNewValues(updateInputValue, i, e.target);
+      }
+    };
 
   const setNewValues = (val, i, labelTarget) => {
-
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
     } else {
@@ -376,7 +376,7 @@ export default function ArraySelector({
        * TODO(Oli): Retrieve the indices from the Indexer rather than manually computing here
        */
       // persist the selected indices for subsequent mapping to labels
-      let sel = []
+      let sel = [];
       if (val.indexOf(":") !== -1) {
         const slice = val.split(":");
         if (slice.length !== 2) {
@@ -389,17 +389,17 @@ export default function ArraySelector({
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [parseInt(slice[0]), dims[i]] : v
           );
-          sel.push(parseInt(slice[0]), dims[i])
+          sel.push(parseInt(slice[0]), dims[i]);
         } else if (slice[0] === "" && slice[1].length > 0) {
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [0, parseInt(slice[1])] : v
           );
-          sel.push(0, parseInt(slice[1]))
+          sel.push(0, parseInt(slice[1]));
         } else {
           newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
             j === i ? [parseInt(slice[0]), parseInt(slice[1])] : v
           );
-          sel.push(parseInt(slice[0]), parseInt(slice[1]))
+          sel.push(parseInt(slice[0]), parseInt(slice[1]));
         }
         newViewerSpec.drawing = false;
       } else {
@@ -407,24 +407,26 @@ export default function ArraySelector({
           j === i ? parseInt(val) : v
         );
 
-        sel.push(parseInt(val))
+        sel.push(parseInt(val));
       }
 
-      const prefix = viewer.path.split('/').slice(0, -1).join('/')
-      const coordKey = [prefix, names[i]].join('/');
+      const prefix = viewer.path.split("/").slice(0, -1).join("/");
+      const coordKey = [prefix, names[i]].join("/");
       const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
-      const targetLabelValues = sel.map(v => labelIdx.valHuman(v));
+      const targetLabelValues = sel.map((v) => labelIdx.valHuman(v));
       // TODO(Oli): use react ;)
-      labelTarget.value = targetLabelValues.join(' : ');
+      labelTarget.value = targetLabelValues.join(" : ");
       updateViewer(viewerIdx, newViewerSpec);
     }
-
-  }
-
+  };
 
   const handleDimChange = (i: number) => (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setNewValues(val, i, e.target.parentElement.parentElement.querySelector('.label'));
+    setNewValues(
+      val,
+      i,
+      e.target.parentElement.parentElement.querySelector(".label")
+    );
   };
 
   const handleShouldDraw = () => {
@@ -535,8 +537,8 @@ export default function ArraySelector({
                 <input
                   className={cn(
                     "label flex h-7 w-[25ch] m-1 rounded-md bg-background py-2 px-3 text-md ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  focus-visible:bg-gray-200 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                )}
-                onInput={handleLabelChange(i)}
+                  )}
+                  onInput={handleLabelChange(i)}
                 />
               </div>
             </div>
