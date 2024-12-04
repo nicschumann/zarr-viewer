@@ -189,14 +189,29 @@ export class DateArrayIndexer extends ArrayIndexer {
     return new DateArrayIndexer(array, visibleIndexes, this.dateUnits);
   }
 
-  protected translateH2A(value: number | Date): BigInt {
+  protected translateH2A(value: number | Date): bigint {
     if (value instanceof Date) {
       return BigInt(date2num([value], this.dateUnits)[0]);
     }
+
+    return BigInt(value);
   }
 
   protected translateA2H(value: number): number | Date {
     return num2date(new BigInt64Array([BigInt(value)]), this.dateUnits)[0];
+  }
+
+  public indexOf(value: any, epsilon = 1e-10): number {
+    const translatedPred = this.translateH2A(value);
+    const idx = this.array.findIndex((num) => {
+      let v = BigInt(num) - translatedPred;
+      return (v >= 0 ? v : -v) < epsilon;
+    });
+    if (idx >= 0 && this.visibleIndexes.indexOf(idx) >= 0) {
+      return idx;
+    } else {
+      return -1;
+    }
   }
 
   public valHuman(idx: number) {
