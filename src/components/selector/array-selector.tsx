@@ -293,12 +293,14 @@ export default function ArraySelector({
       const coordKey = [prefix, names[i]].join("/");
       const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
 
-      if (typeof sel === "number") {
-        labels[i].value = labelIdx.valHuman(sel);
-      } else if (sel === null) {
-        labels[i].value = ":";
-      } else if (typeof sel === "object") {
-        labels[i].value == sel.map((v) => labelIdx.valHuman(v)).join(":");
+      if (labelIdx) {
+        if (typeof sel === "number") {
+          labels[i].value = labelIdx.valHuman(sel);
+        } else if (sel === null) {
+          labels[i].value = ":";
+        } else if (typeof sel === "object") {
+          labels[i].value == sel.map((v) => labelIdx.valHuman(v)).join(":");
+        }
       }
     }
   }, [viewer, focus.region]);
@@ -355,6 +357,7 @@ export default function ArraySelector({
     };
 
   const setNewValues = (val, i, labelTarget) => {
+
     if (!isIntegerOrSlice(val)) {
       setLocalUI((p) => ({ ...p, errorDims: [i, ...p.errorDims] }));
     } else {
@@ -406,16 +409,18 @@ export default function ArraySelector({
         newViewerSpec.selection = newViewerSpec.selection.map((v, j) =>
           j === i ? parseInt(val) : v
         );
-
         sel.push(parseInt(val));
       }
+
 
       const prefix = viewer.path.split("/").slice(0, -1).join("/");
       const coordKey = [prefix, names[i]].join("/");
       const labelIdx: ArrayIndexer = store.coordinateIndexKeys[coordKey];
-      const targetLabelValues = sel.map((v) => labelIdx.valHuman(v));
-      // TODO(Oli): use react ;)
-      labelTarget.value = targetLabelValues.join(" : ");
+      if (labelIdx) {
+        const targetLabelValues = sel.map(v => labelIdx.valHuman(v));
+        // TODO(Oli): use react ;)
+        labelTarget.value = targetLabelValues.join(' : ');
+      }
       updateViewer(viewerIdx, newViewerSpec);
     }
   };
