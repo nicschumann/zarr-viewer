@@ -125,6 +125,18 @@ const getMatrix = (aspect: number, zoom: number, viewport: number[]) => {
   return mat3.multiply([], scaling, translation);
 };
 
+const isIntArray = (d) => {
+  return (
+    d instanceof Uint8Array ||
+    d instanceof Uint16Array ||
+    d instanceof Uint32Array ||
+    d instanceof Int8Array ||
+    d instanceof Int16Array ||
+    d instanceof Int32Array)
+}
+
+
+
 export default function ArrayRenderer({
   parentElement,
   viewer,
@@ -251,12 +263,17 @@ export default function ArrayRenderer({
     const renderLoopId = setInterval(() => {
       regl.clear({ depth: 1, color: clearColor });
 
-      // NOTE(Nic):
       if (renderShape && currentChunk !== null) {
         try {
+          // For now, bluntly try to convert to Float array if int
+          let data = currentChunk.array.data;
+          if (isIntArray(data)) {
+            data = Float32Array.from(currentChunk.array.data)
+          }
+          // NOTE(Nic):
           // @ts-ignore If we read an integer array, this will fail.
           // TODO(Nic): we need a conversion routine that handles bring other dtypes over.
-          const tex = textures.tex(currentChunk.array.data, renderShape);
+          const tex = textures.tex(data, renderShape);
 
           // update canvas if needed
           const { width, height } =
@@ -283,6 +300,7 @@ export default function ArrayRenderer({
             clearColor = [1, 0, 0, 1];
           }
         } catch (e) {
+          console.log(e)
           console.error("couldn't allocate a texture");
           clearColor = [1, 0, 0, 1];
         }
