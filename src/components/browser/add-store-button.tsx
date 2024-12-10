@@ -63,8 +63,8 @@ export default function AddStoreButton({
         if (maybeURI.length > 0 && inputRef.current.validity.valid) {
           setUIState({ state: "loading" });
           const storeOrError = await readStore(maybeURI);
-
           if (resultIsError(storeOrError)) {
+            console.log(storeOrError.message);
             setUIState({ state: "error" });
           } else {
             setUIState({ state: "normal" });

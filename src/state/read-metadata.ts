@@ -129,6 +129,9 @@ export const readStore = async (
       if (!(root.kind == "group")) {
         throw Error("Can not process non-group")
       }
+      if (!Object.hasOwn(zarrStore, "contents")) {
+        throw Error("no consolidated metadata found")
+      }
       const contents: { path: string; kind: string }[] = zarrStore.contents();
 
       const data = await Promise.all(
@@ -139,52 +142,74 @@ export const readStore = async (
 
       const { tree, keys } = buildtree(uri, data);
 
+      let coords = {}
+      try {
+        coords = await getCoordsIndices(root, keys)
+      } catch {
+        console.log("Unable to retrieve coords for this array")
+      }
+
       const result: ZarrStore = {
         type: "http",
         uri,
         loaded: true,
         keys,
         tree,
-        coordinateIndexKeys: await getCoordsIndices(root, keys)
-      };
-
-      return result;
-    } catch (e) {
-      // object is an array
-      const arrayPath = uri.split("/");
-      const name = arrayPath[arrayPath.length - 1];
-      const data: zarr.Array<zarr.DataType, any> = root as zarr.Array<
-        zarr.DataType,
-        any
-      >;
-
-      const record: ZarrArray = {
-        name,
-        path: arrayPath.slice(-2).join("/"),
-        type: "array",
-        ref: data,
-        children: {},
-      };
-
-      // to look up coords, we need a root from which to resolve them
-      // make a root store at the group/root holding the array
-      const prefixUri = arrayPath.slice(0, arrayPath.length-1).join('/');
-      const zarrStore = new zarr.FetchStore(prefixUri);
-      const tmpRoot = await zarr.open(zarrStore);
-      if (!(tmpRoot.kind == "group")) {
-        throw Error("Unable to identify array root group")
-      }
-      const coords = await getCoordsIndices(tmpRoot, { [record.path]: record });
-      const result: ZarrStore = {
-        type: "http",
-        uri,
-        loaded: true,
-        keys: { [record.path]: record },
-        tree: record,
         coordinateIndexKeys: coords
       };
 
       return result;
+    } catch (e) {
+      // object is an array, or group without metadata
+      console.log(e)
+      if (root.kind == "array") {
+        const arrayPath = uri.split("/");
+        const name = arrayPath[arrayPath.length - 1];
+        const data: zarr.Array<zarr.DataType, any> = root as zarr.Array<
+          zarr.DataType,
+          any
+        >;
+
+        const record: ZarrArray = {
+          name,
+          path: arrayPath.slice(-2).join("/"),
+          type: "array",
+          ref: data,
+          children: {},
+        };
+
+        // to look up coords, we need a root from which to resolve them
+        // make a root store at the group/root holding the array
+        const prefixUri = arrayPath.slice(0, arrayPath.length-1).join('/');
+        const zarrStore = new zarr.FetchStore(prefixUri);
+        const tmpRoot = await zarr.open(zarrStore);
+
+        if (!(tmpRoot.kind == "group")) {
+          throw Error("Unable to identify array root group")
+        }
+
+        let coords = {}
+        try {
+          coords = await getCoordsIndices(tmpRoot, { [record.path]: record });
+        } catch {
+          console.log("Unable to retrieve coords for this array")
+        }
+
+        const result: ZarrStore = {
+          type: "http",
+          uri,
+          loaded: true,
+          keys: { [record.path]: record },
+          tree: record,
+          coordinateIndexKeys: coords
+        };
+        return result;
+      } else if (root.kind == "group") {
+        // in order to process a group without metadata, we need to fall
+        // back to listing / hierarchy navigation. we don't have this functionality
+        // yet.
+        throw new Error("Unable to process group without metadata")
+      }
     }
 
   } catch (e) {
